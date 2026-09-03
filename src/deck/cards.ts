@@ -44,23 +44,27 @@ export type Rank = (typeof RANKS)[number];
 
 /**
  * What a revealed card is worth: a flat numeric bonus, the ace's special
- * "critical hit if applicable, otherwise +10" case, or a joker's wild card
- * (no fixed effect — up to the DM).
+ * "critical hit if applicable, otherwise `fallback`" case, or a joker's
+ * wild card (no fixed effect — up to the DM).
  */
 export type CardBonus =
   | { kind: "value"; amount: number }
-  | { kind: "ace" }
+  | { kind: "ace"; fallback: number }
   | { kind: "wild" };
 
 /**
- * DM-configurable scale for face-card (J/Q/K) bonuses: "cap10" (flat +10,
- * the default) or "ordinal" (their rank position: J=11, Q=12, K=13). Doesn't
- * affect the ace's separate crit-or-+10 case, or numbers/jokers.
+ * DM-configurable scale for face-card (J/Q/K/A) bonuses: "cap10" (flat +10
+ * for J/Q/K, and the ace's non-crit fallback is also +10 — the default) or
+ * "ordinal" (their rank position: J=11, Q=12, K=13, continuing on to the
+ * ace's non-crit fallback at 14). The ace's *crit* case itself is never
+ * affected — only what it falls back to when a crit doesn't apply.
  */
 export type FaceCardScale = "cap10" | "ordinal";
 export const DEFAULT_FACE_CARD_SCALE: FaceCardScale = "cap10";
 
 const FACE_CARD_ORDINAL_VALUE: Record<"J" | "Q" | "K", number> = { J: 11, Q: 12, K: 13 };
+/** Continues the J=11/Q=12/K=13 sequence (ace-high) for the ace's ordinal fallback. */
+const ACE_ORDINAL_FALLBACK = 14;
 
 /** The 6-A short deck used by Six Plus Hold'em and by Schnapsen/Sixty-Six. */
 const SHORT_DECK_RANKS: readonly Rank[] = ["6", "7", "8", "9", "10", "J", "Q", "K", "A"];
@@ -142,7 +146,8 @@ export function cardLabel(cardId: CardId): string {
 /**
  * What a card is worth: number cards hold their face value, face cards
  * (J/Q/K) are either a flat +10 or their ordinal value per `faceCardScale`,
- * an ace is a critical hit where the roll allows one (otherwise +10), and
+ * an ace is a critical hit where the roll allows one (otherwise the same
+ * scale's fallback: +10, or +14 continuing the ordinal sequence), and
  * jokers are wild — no fixed effect, up to the DM.
  */
 export function cardBonus(
@@ -152,7 +157,9 @@ export function cardBonus(
   if (isJoker(cardId)) return { kind: "wild" };
   const parsed = parseCard(cardId);
   if (!parsed) return { kind: "wild" };
-  if (parsed.rank === "A") return { kind: "ace" };
+  if (parsed.rank === "A") {
+    return { kind: "ace", fallback: faceCardScale === "ordinal" ? ACE_ORDINAL_FALLBACK : 10 };
+  }
   if (parsed.rank === "J" || parsed.rank === "Q" || parsed.rank === "K") {
     const amount = faceCardScale === "ordinal" ? FACE_CARD_ORDINAL_VALUE[parsed.rank] : 10;
     return { kind: "value", amount };
@@ -160,7 +167,7 @@ export function cardBonus(
   return { kind: "value", amount: Number(parsed.rank) };
 }
 
-/** Short on-card annotation, e.g. "+7", "+10", "+12", "Crit / +10", or "Wild". */
+/** Short on-card annotation, e.g. "+7", "+10", "+12", "Crit / +10", "Crit / +14", or "Wild". */
 export function cardBonusLabel(
   cardId: CardId,
   faceCardScale: FaceCardScale = DEFAULT_FACE_CARD_SCALE,
@@ -170,7 +177,7 @@ export function cardBonusLabel(
     case "value":
       return `+${bonus.amount}`;
     case "ace":
-      return "Crit / +10";
+      return `Crit / +${bonus.fallback}`;
     case "wild":
       return "Wild";
   }
@@ -186,7 +193,7 @@ export function cardBonusDescription(
     case "value":
       return `+${bonus.amount}`;
     case "ace":
-      return "Critical hit if applicable, otherwise +10";
+      return `Critical hit if applicable, otherwise +${bonus.fallback}`;
     case "wild":
       return "Wild card — up to the DM";
   }

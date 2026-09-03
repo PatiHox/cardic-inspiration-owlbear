@@ -171,7 +171,8 @@ function FaceCardScaleSetting({
   // Static regardless of the current value — swapping this text on every
   // toggle click was distracting; the toggle position and the readout
   // (in the read-only view) already show the current value.
-  const description = "Flat +10 for J/Q/K, or their ordinal value (J=11, Q=12, K=13).";
+  const description =
+    "Flat +10 for J/Q/K (and a non-crit ace), or their ordinal value (J=11, Q=12, K=13, A=14).";
 
   if (!isGM) {
     return (

@@ -24,24 +24,45 @@ value and use it as a bonus on a roll. There's no automatic roll integration
 - Once flipped, the card's rank/suit is visible to everyone, annotated with
   what it's worth:
   - Number cards (2-10) hold their face value.
-  - Face cards (J/Q/K) are a flat **+10**.
-  - An **ace** is a critical hit where the roll allows one, otherwise **+10**
-    (shown as "Crit / +10" — the extension doesn't know what roll it's for,
-    so it can't decide this automatically; the player/DM applies whichever
-    half is relevant at the table).
+  - Face cards (J/Q/K) are, per the **Settings** panel's "Face card value"
+    toggle, either a flat **+10** each (the default) or their ordinal rank
+    (**J=11, Q=12, K=13**).
+  - An **ace** is a critical hit where the roll allows one, otherwise the
+    same toggle's fallback value (**+10**, or **+14** continuing the
+    ordinal sequence) — shown as e.g. "Crit / +10". The extension doesn't
+    know what roll it's for, so it can't decide which half applies
+    automatically; the player/DM applies whichever is relevant at the table.
   - **Jokers are wild** — no fixed effect, entirely up to the DM.
 
   Edit `cardBonus`/`cardBonusLabel` in [`src/deck/cards.ts`](src/deck/cards.ts)
-  if your table plays a different scale. After a card's been used, the
-  player discards it, returning it to that deck's discard pile.
+  if your table plays a different scale entirely. After a card's been used,
+  the player discards it, returning it to that deck's discard pile.
 - DM-only controls: create/rename/delete a deck, shuffle its draw pile,
   "reset" a deck (shuffles the discard pile and any outstanding hands back
   into the draw pile), and — via the ⚙ **Settings** popup — cap how many
-  cards a single player may hold across all decks at once.
+  cards a single player may hold across all decks at once, and set the
+  face-card value scale above.
 
 All state lives in the Owlbear Rodeo room's metadata, which OBR syncs live
 to every connected client — that's what makes the popover "shared": every
 player who opens it sees the same live state.
+
+## Installing in Owlbear Rodeo
+
+Each player (DM included) who wants to see the extension needs to add it to
+their own Owlbear Rodeo profile once:
+
+1. Open [Owlbear Rodeo](https://www.owlbear.rodeo/) and open your room.
+2. Bottom left, click **Extras**.
+3. Go to the **Extensions** tab.
+4. Top right, click **Add Custom Extension**.
+5. Paste this link and confirm:
+
+   ```
+   https://patihox.github.io/cardic-inspiration-owlbear/manifest.json
+   ```
+
+6. The extension's icon now shows up in the room's action toolbar.
 
 ## Development
 
