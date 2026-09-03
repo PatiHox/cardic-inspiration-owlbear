@@ -1,0 +1,263 @@
+.app {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  background: var(--obr-bg, #ffffff);
+  color: var(--obr-text, #1a1a1a);
+  font-size: 14px;
+}
+
+.app--loading {
+  align-items: center;
+  justify-content: center;
+  color: var(--obr-text-secondary, #666);
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.app-icon {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.app-subtitle {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--obr-text-secondary, #666);
+}
+
+.panel {
+  background: var(--obr-bg-paper, #f7f6f3);
+  border: 1px solid var(--obr-border, rgba(0, 0, 0, 0.12));
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.panel-title {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--obr-text-secondary, #666);
+}
+
+.empty-state {
+  margin: 0;
+  font-size: 13px;
+  color: var(--obr-text-secondary, #666);
+}
+
+.stack-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.stack-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 8px;
+  background: var(--obr-bg, #ffffff);
+  border: 1px solid var(--obr-border, rgba(0, 0, 0, 0.08));
+}
+
+.stack-row-main {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.stack-name {
+  font-weight: 600;
+}
+
+.stack-name--editable {
+  cursor: pointer;
+  border-bottom: 1px dashed var(--obr-text-secondary, #999);
+}
+
+.stack-counts {
+  font-size: 12px;
+  color: var(--obr-text-secondary, #666);
+}
+
+.stack-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.btn {
+  border: 1px solid var(--obr-border, rgba(0, 0, 0, 0.15));
+  background: transparent;
+  color: var(--obr-text, #1a1a1a);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  line-height: 1.2;
+}
+
+.btn:hover:not(:disabled) {
+  filter: brightness(0.97);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.btn-primary {
+  background: var(--obr-primary, #6a4fb6);
+  border-color: var(--obr-primary, #6a4fb6);
+  color: var(--obr-primary-contrast, #fff);
+  font-weight: 600;
+}
+
+.btn-ghost {
+  background: transparent;
+}
+
+.btn-danger {
+  border-color: #c0392b;
+  color: #c0392b;
+}
+
+.btn-tiny {
+  padding: 2px 8px;
+  font-size: 11px;
+}
+
+.text-input {
+  border: 1px solid var(--obr-border, rgba(0, 0, 0, 0.2));
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 13px;
+  background: var(--obr-bg, #fff);
+  color: var(--obr-text, #1a1a1a);
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.new-stack-toggle {
+  margin-top: 10px;
+  width: 100%;
+}
+
+.new-stack-form {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px dashed var(--obr-border, rgba(0, 0, 0, 0.2));
+  border-radius: 8px;
+}
+
+.new-stack-form-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.hands-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.hand-row-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.player-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.player-name {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.hand-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.hand-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.card-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  height: 44px;
+  padding: 0 6px;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 13px;
+  border: 1px solid var(--obr-border, rgba(0, 0, 0, 0.15));
+}
+
+.card-chip--back {
+  background: repeating-linear-gradient(
+    45deg,
+    var(--obr-primary, #6a4fb6),
+    var(--obr-primary, #6a4fb6) 4px,
+    var(--obr-bg-paper, #f0edf7) 4px,
+    var(--obr-bg-paper, #f0edf7) 8px
+  );
+  font-size: 20px;
+  color: var(--obr-bg, #fff);
+}
+
+.card-chip--face {
+  background: #ffffff;
+}
+
+.card-chip--face.card-chip--red {
+  color: #c0392b;
+}
+
+.card-chip--face.card-chip--black {
+  color: #1a1a1a;
+}
