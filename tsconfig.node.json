@@ -10,8 +10,9 @@
     "isolatedModules": true,
     "moduleDetection": "force",
     "noEmit": true,
+    "allowJs": true,
 
     "strict": true
   },
-  "include": ["vite.config.ts"]
+  "include": ["vite.config.ts", "site.config.mjs"]
 }

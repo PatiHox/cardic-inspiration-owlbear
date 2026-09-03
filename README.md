@@ -60,16 +60,32 @@ https://<your-github-username>.github.io/owlbear-ext/manifest.json
 ```
 
 Use that URL as the install link instead of the localhost one. If you
-rename the repository, update the `base` path in
-[`vite.config.ts`](vite.config.ts) to match.
+rename the repository, update `REPO_BASE` in
+[`site.config.mjs`](site.config.mjs) to match.
+
+### Why `manifest.json` needs a rebase step
+
+[`public/manifest.json`](public/manifest.json) uses root-relative paths
+(`/icon.svg`, popover `/`), matching Owlbear Rodeo's own tutorial examples —
+that's required because OBR's frontend expects those fields to already
+resolve against the extension's own origin rather than resolving them
+itself; a bare relative path like `"icon.svg"` or `"./"` throws
+`Failed to construct 'URL': Invalid URL` inside Owlbear Rodeo. That's
+correct for local dev (served from the origin root), but wrong once
+deployed under GitHub Pages' `/owlbear-ext/` subpath. `npm run build` runs
+[`scripts/rebase-manifest.mjs`](scripts/rebase-manifest.mjs) after `vite
+build` to prefix those paths with `REPO_BASE` in the built
+`dist/manifest.json` only — the source file in `public/` is untouched.
 
 ## Project layout
 
 ```
-public/manifest.json   Extension manifest (action popover config)
-src/deck/cards.ts       Card ids, labels, shuffling
-src/deck/state.ts       Deck/hand state shape + pure state-transition functions
-src/obr/useOwlbear.ts   Hook wrapping the OBR SDK: ready state, player/role,
-                         party roster, theme, and synced deck state
-src/components/         UI: stack list, DM controls, per-player hands
+public/manifest.json          Extension manifest (root-relative paths, for local dev)
+site.config.mjs                REPO_BASE — the GitHub Pages repo path, single source of truth
+scripts/rebase-manifest.mjs    Post-build step: rewrites dist/manifest.json under REPO_BASE
+src/deck/cards.ts              Card ids, labels, shuffling
+src/deck/state.ts              Deck/hand state shape + pure state-transition functions
+src/obr/useOwlbear.ts          Hook wrapping the OBR SDK: ready state, player/role,
+                                party roster, theme, and synced deck state
+src/components/                UI: stack list, DM controls, per-player hands
 ```
