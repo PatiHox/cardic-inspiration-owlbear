@@ -4,40 +4,43 @@
   flex-direction: column;
   gap: 16px;
   padding: 16px;
-  /* OBR's own panels can render "Glass" (blurred, see-through to the scene
-     behind) instead of a flat opaque fill — that choice isn't exposed to
-     extensions via the SDK, so we can't detect or match it exactly. Instead
-     we always render our own frosted-glass surface: the iframe's body is
-     already transparent (see index.css), so a blurred, mostly-opaque
-     background here lets the scene show through softly, the way native
-     panels do, rather than sitting as a hard opaque slab. Kept at 92% so
-     our own text contrast never depends on whatever's on the map behind it. */
-  background: color-mix(in srgb, var(--obr-bg, #ffffff) 92%, transparent);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  /* No background here on purpose, matching how OBR's own extensions do
+     this (checked owlbear-rodeo/dice's source): their action-popover root
+     (App.tsx) has no enclosing background at all — just layout components
+     sitting on the transparent <body> (see index.css) — and only the
+     individual controls that need a legible surface (like our .panel
+     below) get their own background. A backdrop-filter blur was tried
+     here first to actively show the scene through, on the theory that's
+     how OBR's "Glass" Overlay Effect setting works, but confirmed live
+     (both in a sandboxed iframe test and in an actual OBR room) that
+     backdrop-filter doesn't cross the extension iframe boundary at all —
+     so there's nothing to blur, and staying transparent is what matches
+     official extensions rather than an opaque fill that doesn't. */
   color: var(--obr-text, #1a1a1a);
   font-size: 14px;
-}
-
-/* Browsers without backdrop-filter support would otherwise show a
-   translucent-but-unblurred app over a distracting, uncontrolled scene —
-   fall back to a fully opaque surface instead. */
-@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .app {
-    background: var(--obr-bg, #ffffff);
-  }
 }
 
 .app--loading {
   align-items: center;
   justify-content: center;
   color: var(--obr-text-secondary, #666);
+  /* Brief and text-only, so it gets a full backing rather than floating
+     transparently like the loaded .app does — same reasoning as
+     .app-header below. */
+  background: var(--obr-bg-paper, #f7f6f3);
 }
 
 .app-header {
   display: flex;
   align-items: center;
   gap: 10px;
+  /* Unlike .app, this carries real text (the title) with nothing else
+     behind it, so it needs its own legible surface rather than floating
+     directly on whatever's transparent behind the app shell. */
+  background: var(--obr-bg-paper, #f7f6f3);
+  border: 1px solid var(--obr-border, rgba(0, 0, 0, 0.12));
+  border-radius: 10px;
+  padding: 10px 12px;
 }
 
 .app-icon {
@@ -58,18 +61,13 @@
 }
 
 .panel {
-  /* Slightly more opaque than .app: it carries most of the actual text, so
-     it leans toward legible-but-still-glassy rather than fully see-through. */
-  background: color-mix(in srgb, var(--obr-bg-paper, #f7f6f3) 96%, transparent);
+  /* Fully opaque, unlike .app above: this is where the actual deck/hand
+     data lives, and it needs to stay legible regardless of theme or
+     whatever's rendered behind the (transparent) app shell. */
+  background: var(--obr-bg-paper, #f7f6f3);
   border: 1px solid var(--obr-border, rgba(0, 0, 0, 0.12));
   border-radius: 10px;
   padding: 12px;
-}
-
-@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .panel {
-    background: var(--obr-bg-paper, #f7f6f3);
-  }
 }
 
 .panel-title {
