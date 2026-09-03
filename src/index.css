@@ -1,5 +1,12 @@
 :root {
-  color-scheme: light dark;
+  /* No `color-scheme` here on purpose. Declaring `light dark` (or even a
+     single fixed value) before OBR's real theme is known makes the browser
+     paint an opaque canvas fill wherever nothing else is set — which
+     defeats a translucent .app background entirely and, under a dark
+     preference, renders as solid black (confirmed live). App.tsx sets
+     `color-scheme` per-element, scoped to .app, once the real theme mode
+     is known, so native controls (checkboxes) still match without ever
+     painting an unwanted default first. */
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 

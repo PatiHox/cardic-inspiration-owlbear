@@ -21,6 +21,14 @@ import "./App.css";
 function themeVars(theme: Theme | null): CSSProperties {
   if (!theme) return {};
   return {
+    // Scoped to this element rather than declared globally in index.css: a
+    // blanket `color-scheme: light dark` before the real theme is known
+    // makes the browser paint an opaque default canvas fill wherever
+    // nothing else is set, which both defeats a translucent background and
+    // renders as solid black under a dark preference (confirmed live).
+    // Setting it here, per the actual theme, keeps native controls
+    // (checkboxes) matching without that risk.
+    colorScheme: theme.mode === "DARK" ? "dark" : "light",
     "--obr-bg": theme.background.default,
     "--obr-bg-paper": theme.background.paper,
     "--obr-text": theme.text.primary,
