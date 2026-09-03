@@ -1,3 +1,4 @@
+import type { FaceCardScale } from "../deck/cards";
 import type { DrawnCard } from "../deck/state";
 import { CardChip } from "./CardChip";
 
@@ -5,6 +6,7 @@ interface HandsBoardProps {
   drawnCards: DrawnCard[];
   selfId: string;
   maxHandSize: number | null;
+  faceCardScale: FaceCardScale;
   onFlip: (drawnCardId: string) => void;
   onDiscard: (drawnCardId: string) => void;
 }
@@ -36,7 +38,14 @@ function groupByPlayer(drawnCards: DrawnCard[]): Hand[] {
   return order.map((id) => hands.get(id)!);
 }
 
-export function HandsBoard({ drawnCards, selfId, maxHandSize, onFlip, onDiscard }: HandsBoardProps) {
+export function HandsBoard({
+  drawnCards,
+  selfId,
+  maxHandSize,
+  faceCardScale,
+  onFlip,
+  onDiscard,
+}: HandsBoardProps) {
   const hands = groupByPlayer(drawnCards);
 
   return (
@@ -64,7 +73,7 @@ export function HandsBoard({ drawnCards, selfId, maxHandSize, onFlip, onDiscard 
                 const isOwn = card.playerId === selfId;
                 return (
                   <div key={card.id} className="hand-card">
-                    <CardChip cardId={card.cardId} revealed={card.revealed} />
+                    <CardChip cardId={card.cardId} revealed={card.revealed} faceCardScale={faceCardScale} />
                     {isOwn && !card.revealed && (
                       <button className="btn btn-tiny" onClick={() => onFlip(card.id)}>
                         Flip

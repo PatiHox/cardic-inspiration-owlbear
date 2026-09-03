@@ -11,12 +11,14 @@ import {
   handSize,
   renameStack,
   resetStack,
+  setFaceCardScale,
   setMaxHandSize,
   shuffleStack,
 } from "./deck/state";
 import { StackList } from "./components/StackList";
 import { HandsBoard } from "./components/HandsBoard";
 import { SettingsModal } from "./components/SettingsModal";
+import { GearIcon } from "./components/icons";
 import "./App.css";
 
 function themeVars(theme: Theme | null): CSSProperties {
@@ -87,7 +89,7 @@ export default function App() {
           aria-label="Open settings"
           title="Settings"
         >
-          ⚙
+          <GearIcon />
         </button>
       </header>
 
@@ -110,6 +112,7 @@ export default function App() {
         drawnCards={deckState.drawnCards}
         selfId={self.id}
         maxHandSize={deckState.maxHandSize}
+        faceCardScale={deckState.faceCardScale}
         onFlip={(drawnCardId) => updateState((s) => flipCard(s, drawnCardId))}
         onDiscard={(drawnCardId) => updateState((s) => discardCard(s, drawnCardId))}
       />
@@ -120,6 +123,8 @@ export default function App() {
         isGM={isGM}
         maxHandSize={deckState.maxHandSize}
         onSetMaxHandSize={(max) => updateState((s) => setMaxHandSize(s, max))}
+        faceCardScale={deckState.faceCardScale}
+        onSetFaceCardScale={(scale) => updateState((s) => setFaceCardScale(s, scale))}
       />
     </div>
   );

@@ -1,9 +1,11 @@
 import {
   DEFAULT_DECK_PRESET_ID,
+  DEFAULT_FACE_CARD_SCALE,
   deckPreset,
   createDeck,
   shuffle,
   type CardId,
+  type FaceCardScale,
 } from "./cards";
 
 export interface Stack {
@@ -39,6 +41,8 @@ export interface DeckState {
   initialized: boolean;
   /** Max cards a single player may hold across all decks at once, or null for no limit. */
   maxHandSize: number | null;
+  /** How face-card (J/Q/K) bonuses are scaled — see FaceCardScale in cards.ts. */
+  faceCardScale: FaceCardScale;
 }
 
 export const EMPTY_STATE: DeckState = {
@@ -47,6 +51,7 @@ export const EMPTY_STATE: DeckState = {
   drawnCards: [],
   initialized: false,
   maxHandSize: null,
+  faceCardScale: DEFAULT_FACE_CARD_SCALE,
 };
 
 /** Namespaced room-metadata key, per OBR's recommended reverse-DNS convention. */
@@ -163,6 +168,11 @@ export function isHandFull(state: DeckState, playerId: string): boolean {
 export function setMaxHandSize(state: DeckState, max: number | null): DeckState {
   const normalized = max != null && Number.isFinite(max) && max > 0 ? Math.floor(max) : null;
   return { ...state, maxHandSize: normalized };
+}
+
+/** DM setting: how face-card (J/Q/K) bonuses are scaled for every deck in this room. */
+export function setFaceCardScale(state: DeckState, scale: FaceCardScale): DeckState {
+  return { ...state, faceCardScale: scale };
 }
 
 /** Draw the top card of a stack's draw pile into `player`'s hand. */
