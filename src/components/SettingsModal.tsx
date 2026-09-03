@@ -168,9 +168,10 @@ function FaceCardScaleSetting({
   onSetScale: (scale: FaceCardScale) => void;
 }) {
   const isOrdinal = scale === "ordinal";
-  const description = isOrdinal
-    ? "J/Q/K keep their ordinal value: J = +11, Q = +12, K = +13."
-    : "J/Q/K are all worth a flat +10, same as a 10.";
+  // Static regardless of the current value — swapping this text on every
+  // toggle click was distracting; the toggle position and the readout
+  // (in the read-only view) already show the current value.
+  const description = "Flat +10 for J/Q/K, or their ordinal value (J=11, Q=12, K=13).";
 
   if (!isGM) {
     return (
