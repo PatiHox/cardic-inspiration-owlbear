@@ -1,5 +1,8 @@
 # Inspiration Cards
 
+> **AI use disclosure:** This extension was written entirely by an AI
+> coding agent. See [AI_DISCLOSURE.md](AI_DISCLOSURE.md) for details.
+
 An [Owlbear Rodeo](https://www.owlbear.rodeo/) extension for tracking
 card-draw "inspiration" decks at the table: when a player gets inspiration,
 they draw a card from a shared deck; later they can flip it to reveal its

@@ -389,13 +389,6 @@
      secondary to the rank above it. */
 }
 
-.app-footer {
-  margin: 0;
-  text-align: center;
-  font-size: 11px;
-  color: var(--obr-text-secondary, #666);
-}
-
 .sr-only {
   position: absolute;
   width: 1px;

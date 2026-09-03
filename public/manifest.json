@@ -2,7 +2,7 @@
   "name": "Inspiration Cards",
   "version": "1.3.0",
   "manifest_version": 1,
-  "description": "Track shared card-draw inspiration decks for your table.",
+  "description": "Track shared card-draw inspiration decks for your table. Written entirely by AI (Claude Code).",
   "homepage_url": "https://github.com/PatiHox/owlbear-ext",
   "icon": "/icon.svg",
   "action": {
