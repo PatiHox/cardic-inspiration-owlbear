@@ -92,8 +92,27 @@
 }
 
 .stack-name--editable {
-  cursor: pointer;
+  /* Reset button chrome so this reads as text, not a UA button. */
+  appearance: none;
+  background: none;
+  border: none;
   border-bottom: 1px dashed var(--obr-text-secondary, #999);
+  margin: 0;
+  padding: 0;
+  font: inherit;
+  font-weight: 600;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.stack-tag {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--obr-primary, #6a4fb6);
+  color: var(--obr-primary-contrast, #fff);
 }
 
 .stack-counts {
@@ -116,6 +135,9 @@
   font-size: 12px;
   cursor: pointer;
   line-height: 1.2;
+  /* Meets the WCAG 2.2 AA 24x24px minimum with room to spare; this is a
+     tabletop tool that's often used on a tablet, so err bigger. */
+  min-height: 32px;
 }
 
 .btn:hover:not(:disabled) {
@@ -144,8 +166,12 @@
 }
 
 .btn-tiny {
-  padding: 2px 8px;
+  padding: 4px 10px;
   font-size: 11px;
+  /* Smaller than .btn's 32px because up to 5 of these sit under one hand's
+     cards in a 420px-wide popover; still clears the 24x24 AA minimum,
+     just short of the 44px best-practice target given the space budget. */
+  min-height: 26px;
 }
 
 .text-input {
@@ -162,6 +188,30 @@
   align-items: center;
   gap: 6px;
   font-size: 13px;
+}
+
+.select-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--obr-text-secondary, #666);
+}
+
+.select-input {
+  border: 1px solid var(--obr-border, rgba(0, 0, 0, 0.2));
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 13px;
+  background: var(--obr-bg, #fff);
+  color: var(--obr-text, #1a1a1a);
+  min-height: 32px;
+}
+
+.new-stack-total {
+  margin: 0;
+  font-size: 12px;
+  color: var(--obr-text-secondary, #666);
 }
 
 .new-stack-toggle {
@@ -243,11 +293,9 @@
     45deg,
     var(--obr-primary, #6a4fb6),
     var(--obr-primary, #6a4fb6) 4px,
-    var(--obr-bg-paper, #f0edf7) 4px,
-    var(--obr-bg-paper, #f0edf7) 8px
+    var(--obr-bg-paper, #f7f6f3) 4px,
+    var(--obr-bg-paper, #f7f6f3) 8px
   );
-  font-size: 20px;
-  color: var(--obr-bg, #fff);
 }
 
 .card-chip--face {
@@ -273,5 +321,21 @@
   font-size: 10px;
   font-weight: 600;
   line-height: 1;
-  opacity: 0.75;
+  /* No opacity fade here: at 0.75 the red suit color (#c0392b) drops to a
+     3.54:1 contrast against the white card face, below the 4.5:1 WCAG AA
+     minimum for text (verified against the rendered page). Full-strength
+     red clears 5.44:1; the smaller font size alone still reads as
+     secondary to the rank above it. */
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }

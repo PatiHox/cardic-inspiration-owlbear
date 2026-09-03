@@ -39,8 +39,10 @@ export function HandsBoard({ drawnCards, selfId, onFlip, onDiscard }: HandsBoard
   const hands = groupByPlayer(drawnCards);
 
   return (
-    <section className="panel">
-      <h2 className="panel-title">Hands</h2>
+    <section className="panel" aria-labelledby="hands-heading">
+      <h2 id="hands-heading" className="panel-title">
+        Hands
+      </h2>
 
       {hands.length === 0 && (
         <p className="empty-state">Nobody is holding a card right now.</p>

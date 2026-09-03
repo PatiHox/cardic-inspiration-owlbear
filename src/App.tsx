@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import { useEffect, type CSSProperties } from "react";
 import type { Theme } from "@owlbear-rodeo/sdk";
 import { useOwlbear } from "./obr/useOwlbear";
 import {
@@ -6,6 +6,7 @@ import {
   deleteStack,
   discardCard,
   drawCard,
+  ensureDefaultStack,
   flipCard,
   renameStack,
   resetStack,
@@ -30,16 +31,24 @@ function themeVars(theme: Theme | null): CSSProperties {
 
 export default function App() {
   const { ready, self, theme, deckState, updateState } = useOwlbear();
+  const isGM = ready && self?.role === "GM";
+
+  // One-time setup: give a fresh room a standard deck to start with, so
+  // players aren't staring at an empty list before the DM builds one. Only
+  // the GM does this, and only until `initialized` flips true.
+  useEffect(() => {
+    if (isGM && !deckState.initialized) {
+      updateState((s) => ensureDefaultStack(s));
+    }
+  }, [isGM, deckState.initialized, updateState]);
 
   if (!ready || !self) {
     return (
-      <div className="app app--loading" style={themeVars(theme)}>
+      <div className="app app--loading" style={themeVars(theme)} role="status" aria-live="polite">
         Loading…
       </div>
     );
   }
-
-  const isGM = self.role === "GM";
 
   return (
     <div className="app" style={themeVars(theme)}>
@@ -59,8 +68,8 @@ export default function App() {
         onReset={(stackId) => updateState((s) => resetStack(s, stackId))}
         onRename={(stackId, name) => updateState((s) => renameStack(s, stackId, name))}
         onDelete={(stackId) => updateState((s) => deleteStack(s, stackId))}
-        onCreate={(name, includeJokers) =>
-          updateState((s) => createStack(s, name, includeJokers))
+        onCreate={(name, includeJokers, deckSizeId) =>
+          updateState((s) => createStack(s, name, includeJokers, deckSizeId))
         }
       />
 

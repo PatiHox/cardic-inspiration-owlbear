@@ -62,16 +62,60 @@ const RANK_BONUS: Record<Rank, number> = {
   K: 13,
 };
 
-/** Build the 52 card ids for a full deck, optionally with 2 jokers. */
-export function createDeck(includeJokers: boolean): CardId[] {
-  const cards: CardId[] = [];
+/** The 6-A short deck used by Six Plus Hold'em and by Schnapsen/Sixty-Six. */
+const SHORT_DECK_RANKS: readonly Rank[] = ["6", "7", "8", "9", "10", "J", "Q", "K", "A"];
+
+export interface DeckPreset {
+  /** Stable id, stored on a Stack so it survives if labels change later. */
+  id: string;
+  /** Full label for the size picker, e.g. "36 cards — Short Deck (6-A)". */
+  label: string;
+  /** Short badge shown on a deck's row, or null for the unremarkable default. */
+  tag: string | null;
+  /** Ranks present in a single copy. */
+  ranks: readonly Rank[];
+  /** How many copies of that rank set are combined (a multi-deck "shoe"). */
+  deckCount: number;
+}
+
+/**
+ * The standard deck sizes offered in the UI: the 36-card short deck (Six
+ * Plus Hold'em / Schnapsen), a normal 52-card deck, and the multi-deck
+ * "shoe" sizes casinos use (2/4/6/8 combined 52-card decks) for a bigger
+ * table that wants more cards in circulation before a reshuffle.
+ */
+export const DECK_PRESETS: DeckPreset[] = [
+  { id: "36", label: "36 cards — Short Deck (6-A)", tag: "Short Deck", ranks: SHORT_DECK_RANKS, deckCount: 1 },
+  { id: "52", label: "52 cards — 1 deck", tag: null, ranks: RANKS, deckCount: 1 },
+  { id: "104", label: "104 cards — 2 decks", tag: "2 decks", ranks: RANKS, deckCount: 2 },
+  { id: "208", label: "208 cards — 4 decks", tag: "4 decks", ranks: RANKS, deckCount: 4 },
+  { id: "312", label: "312 cards — 6 decks", tag: "6 decks", ranks: RANKS, deckCount: 6 },
+  { id: "416", label: "416 cards — 8 decks", tag: "8 decks", ranks: RANKS, deckCount: 8 },
+];
+export const DEFAULT_DECK_PRESET_ID = "52";
+
+export function deckPreset(id: string): DeckPreset {
+  return DECK_PRESETS.find((p) => p.id === id) ?? DECK_PRESETS.find((p) => p.id === DEFAULT_DECK_PRESET_ID)!;
+}
+
+/**
+ * Build the card ids for one deck preset, optionally with 2 jokers per deck
+ * copy. Duplicate ids across copies are fine — plain arrays, not a set,
+ * hold the draw/discard piles.
+ */
+export function createDeck(preset: DeckPreset, includeJokers: boolean): CardId[] {
+  const singleDeck: CardId[] = [];
   for (const suit of SUITS) {
-    for (const rank of RANKS) {
-      cards.push(`${suit}-${rank}`);
+    for (const rank of preset.ranks) {
+      singleDeck.push(`${suit}-${rank}`);
     }
   }
   if (includeJokers) {
-    cards.push("JOKER-1", "JOKER-2");
+    singleDeck.push("JOKER-1", "JOKER-2");
+  }
+  const cards: CardId[] = [];
+  for (let i = 0; i < preset.deckCount; i++) {
+    cards.push(...singleDeck);
   }
   return cards;
 }

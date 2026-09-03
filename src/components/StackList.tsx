@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { DECK_PRESETS, DEFAULT_DECK_PRESET_ID, deckPreset } from "../deck/cards";
 import type { Stack } from "../deck/state";
 
 interface StackListProps {
@@ -9,7 +10,7 @@ interface StackListProps {
   onReset: (stackId: string) => void;
   onRename: (stackId: string, name: string) => void;
   onDelete: (stackId: string) => void;
-  onCreate: (name: string, includeJokers: boolean) => void;
+  onCreate: (name: string, includeJokers: boolean, deckSizeId: string) => void;
 }
 
 export function StackList({
@@ -23,8 +24,10 @@ export function StackList({
   onCreate,
 }: StackListProps) {
   return (
-    <section className="panel">
-      <h2 className="panel-title">Decks</h2>
+    <section className="panel" aria-labelledby="decks-heading">
+      <h2 id="decks-heading" className="panel-title">
+        Decks
+      </h2>
 
       {stacks.length === 0 && (
         <p className="empty-state">
@@ -80,6 +83,7 @@ function StackRow({ stack, isGM, onDraw, onShuffle, onReset, onRename, onDelete 
         {editing ? (
           <input
             className="text-input"
+            aria-label="Deck name"
             autoFocus
             value={draftName}
             onChange={(e) => setDraftName(e.target.value)}
@@ -92,14 +96,20 @@ function StackRow({ stack, isGM, onDraw, onShuffle, onReset, onRename, onDelete 
               }
             }}
           />
-        ) : (
-          <span
-            className={"stack-name" + (isGM ? " stack-name--editable" : "")}
-            onClick={() => isGM && setEditing(true)}
-            title={isGM ? "Click to rename" : undefined}
+        ) : isGM ? (
+          <button
+            type="button"
+            className="stack-name stack-name--editable"
+            onClick={() => setEditing(true)}
+            title="Click to rename"
           >
             {stack.name}
-          </span>
+          </button>
+        ) : (
+          <span className="stack-name">{stack.name}</span>
+        )}
+        {deckPreset(stack.deckSizeId).tag && (
+          <span className="stack-tag">{deckPreset(stack.deckSizeId).tag}</span>
         )}
         <span className="stack-counts">
           {stack.drawPile.length} left · {stack.discardPile.length} discarded
@@ -143,10 +153,15 @@ function StackRow({ stack, isGM, onDraw, onShuffle, onReset, onRename, onDelete 
   );
 }
 
-function NewStackForm({ onCreate }: { onCreate: (name: string, includeJokers: boolean) => void }) {
+function NewStackForm({
+  onCreate,
+}: {
+  onCreate: (name: string, includeJokers: boolean, deckSizeId: string) => void;
+}) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("Inspiration Deck");
   const [includeJokers, setIncludeJokers] = useState(false);
+  const [deckSizeId, setDeckSizeId] = useState(DEFAULT_DECK_PRESET_ID);
 
   if (!open) {
     return (
@@ -157,11 +172,15 @@ function NewStackForm({ onCreate }: { onCreate: (name: string, includeJokers: bo
   }
 
   function submit() {
-    onCreate(name, includeJokers);
+    onCreate(name, includeJokers, deckSizeId);
     setName("Inspiration Deck");
     setIncludeJokers(false);
+    setDeckSizeId(DEFAULT_DECK_PRESET_ID);
     setOpen(false);
   }
+
+  const preset = deckPreset(deckSizeId);
+  const totalCards = preset.ranks.length * 4 * preset.deckCount + (includeJokers ? 2 * preset.deckCount : 0);
 
   return (
     <form
@@ -173,11 +192,26 @@ function NewStackForm({ onCreate }: { onCreate: (name: string, includeJokers: bo
     >
       <input
         className="text-input"
+        aria-label="Deck name"
         value={name}
         onChange={(e) => setName(e.target.value)}
         placeholder="Deck name"
         autoFocus
       />
+      <label className="select-label">
+        Deck size
+        <select
+          className="select-input"
+          value={deckSizeId}
+          onChange={(e) => setDeckSizeId(e.target.value)}
+        >
+          {DECK_PRESETS.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.label}
+            </option>
+          ))}
+        </select>
+      </label>
       <label className="checkbox-label">
         <input
           type="checkbox"
@@ -186,6 +220,7 @@ function NewStackForm({ onCreate }: { onCreate: (name: string, includeJokers: bo
         />
         Include jokers
       </label>
+      <p className="new-stack-total">{totalCards} cards total</p>
       <div className="new-stack-form-actions">
         <button type="submit" className="btn btn-primary">
           Create

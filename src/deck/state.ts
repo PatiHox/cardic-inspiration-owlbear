@@ -1,9 +1,17 @@
-import { type CardId, createDeck, shuffle } from "./cards";
+import {
+  DEFAULT_DECK_PRESET_ID,
+  deckPreset,
+  createDeck,
+  shuffle,
+  type CardId,
+} from "./cards";
 
 export interface Stack {
   id: string;
   name: string;
   includeJokers: boolean;
+  /** Which DeckPreset (see cards.ts) this stack was built from. */
+  deckSizeId: string;
   /** Remaining cards to be drawn. The top of the pile is the last element. */
   drawPile: CardId[];
   /** Cards that have been played/returned. */
@@ -27,12 +35,15 @@ export interface DeckState {
   version: 1;
   stacks: Stack[];
   drawnCards: DrawnCard[];
+  /** Has the one-time default deck already been created for this room? */
+  initialized: boolean;
 }
 
 export const EMPTY_STATE: DeckState = {
   version: 1,
   stacks: [],
   drawnCards: [],
+  initialized: false,
 };
 
 /** Namespaced room-metadata key, per OBR's recommended reverse-DNS convention. */
@@ -46,15 +57,33 @@ export function createStack(
   state: DeckState,
   name: string,
   includeJokers: boolean,
+  deckSizeId: string = DEFAULT_DECK_PRESET_ID,
 ): DeckState {
+  const preset = deckPreset(deckSizeId);
   const stack: Stack = {
     id: randomId(),
     name: name.trim() || "Inspiration Deck",
     includeJokers,
-    drawPile: shuffle(createDeck(includeJokers)),
+    deckSizeId: preset.id,
+    drawPile: shuffle(createDeck(preset, includeJokers)),
     discardPile: [],
   };
   return { ...state, stacks: [...state.stacks, stack] };
+}
+
+/**
+ * One-time setup: if this room has never had a deck created (fresh
+ * install), create a standard "Inspiration Deck" and mark the room as
+ * initialized so this never re-creates a deck the DM has deliberately
+ * cleared out later. Safe to call on every load — it's a no-op once
+ * `initialized` is true.
+ */
+export function ensureDefaultStack(state: DeckState): DeckState {
+  if (state.initialized) return state;
+  return {
+    ...createStack(state, "Inspiration Deck", false, DEFAULT_DECK_PRESET_ID),
+    initialized: true,
+  };
 }
 
 export function renameStack(
