@@ -4,17 +4,16 @@
   flex-direction: column;
   gap: 16px;
   padding: 16px;
-  /* Translucent + blurred, letting the scene show through softly behind
-     the gaps between our own cards — verified this actually works (a
-     striped test pattern visibly blurred through a real iframe boundary)
-     once the real bug was fixed: `color-scheme: light dark` declared
-     globally (see index.css) was painting an opaque default canvas fill
-     under anything that didn't set its own background, masking this
-     entirely and rendering solid black under a dark preference. No actual
-     text sits directly on this layer (title and data both live on the
-     opaque .app-header/.panel cards below), so there's no legibility risk
-     in leaning toward more visible glass rather than a subtle tint. */
-  background: color-mix(in srgb, var(--obr-bg, #ffffff) 80%, transparent);
+  /* Translucent + blurred, letting the scene show through behind the gaps
+     between our own cards — verified this actually works (a striped test
+     pattern visibly blurred through a real iframe boundary) once the real
+     bug was fixed: `color-scheme: light dark` declared globally (see
+     index.css) was painting an opaque default canvas fill under anything
+     that didn't set its own background, masking this entirely and
+     rendering solid black under a dark preference. No actual text sits
+     directly on this layer, so there's no legibility risk in going fairly
+     aggressive on transparency here — see --obr-glass-shell in App.tsx. */
+  background: color-mix(in srgb, var(--obr-bg, #ffffff) var(--obr-glass-shell, 80%), transparent);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   color: var(--obr-text, #1a1a1a);
@@ -37,13 +36,22 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  /* Bare text with nothing else behind it — stays close to fully opaque
-     (unlike .app above) so the title stays legible regardless of theme or
-     scene content, while still reading as part of the same glass surface. */
-  background: color-mix(in srgb, var(--obr-bg-paper, #f7f6f3) 97%, transparent);
+  /* Carries real text, so relies on its own backdrop-filter blur (not just
+     alpha) to stay legible at --obr-glass-card's more assertive opacity —
+     the blur washes out high-frequency scene detail before it ever reaches
+     the text, the same trick real frosted-glass UI relies on. */
+  background: color-mix(in srgb, var(--obr-bg-paper, #f7f6f3) var(--obr-glass-card, 95%), transparent);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--obr-border, rgba(0, 0, 0, 0.12));
   border-radius: 10px;
   padding: 10px 12px;
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .app-header {
+    background: var(--obr-bg-paper, #f7f6f3);
+  }
 }
 
 .app-icon {
@@ -64,13 +72,21 @@
 }
 
 .panel {
-  /* Fully opaque, unlike .app above: this is where the actual deck/hand
-     data lives, and it needs to stay legible regardless of theme or
-     whatever's rendered behind the (transparent) app shell. */
-  background: var(--obr-bg-paper, #f7f6f3);
+  /* Same --obr-glass-card treatment as .app-header: this is where the
+     actual deck/hand data lives, so it leans more opaque than .app, and
+     leans on blur (not alpha alone) to keep that data legible. */
+  background: color-mix(in srgb, var(--obr-bg-paper, #f7f6f3) var(--obr-glass-card, 95%), transparent);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--obr-border, rgba(0, 0, 0, 0.12));
   border-radius: 10px;
   padding: 12px;
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .panel {
+    background: var(--obr-bg-paper, #f7f6f3);
+  }
 }
 
 .panel-title {
@@ -371,6 +387,13 @@
      minimum for text (verified against the rendered page). Full-strength
      red clears 5.44:1; the smaller font size alone still reads as
      secondary to the rank above it. */
+}
+
+.app-footer {
+  margin: 0;
+  text-align: center;
+  font-size: 11px;
+  color: var(--obr-text-secondary, #666);
 }
 
 .sr-only {

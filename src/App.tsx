@@ -36,6 +36,16 @@ function themeVars(theme: Theme | null): CSSProperties {
     "--obr-primary": theme.primary.main,
     "--obr-primary-contrast": theme.primary.contrastText,
     "--obr-border": theme.mode === "DARK" ? "rgba(255,255,255,0.14)" : "rgba(0,0,0,0.12)",
+    // Glass opacity, asymmetric by theme like owlbear-rodeo/dice's own
+    // translucent surface does (their card: 40% opaque in light, 80% in
+    // dark) — a uniform percentage looked fine in dark mode but washed out
+    // to nearly invisible in light mode, since blending anything into a
+    // near-white base barely shifts it. --obr-glass-shell is the mostly
+    // empty .app background (no text sits on it directly); --obr-glass-card
+    // is the .panel/.app-header surfaces, kept more opaque since they carry
+    // the actual data and rely on blur, not just alpha, to stay legible.
+    "--obr-glass-shell": theme.mode === "DARK" ? "55%" : "30%",
+    "--obr-glass-card": theme.mode === "DARK" ? "82%" : "70%",
   } as CSSProperties;
 }
 
