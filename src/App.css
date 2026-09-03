@@ -419,30 +419,36 @@
 
 .modal-overlay {
   /* Scoped to our own iframe's viewport — this popover is the entire
-     document, so `fixed` here never escapes to cover the rest of OBR. */
+     document, so `fixed` here never escapes to cover the rest of OBR.
+     Docked to the right edge (flex-end) and stretched full-height, rather
+     than centered, to match the floating side-panel look other OBR
+     extensions use for their settings surface. */
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.45);
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
+  align-items: stretch;
+  justify-content: flex-end;
+  padding: 16px;
   z-index: 10;
 }
 
 .modal-panel {
   width: 100%;
-  max-width: 320px;
-  max-height: 100%;
+  max-width: 300px;
   overflow-y: auto;
   /* Same --obr-glass-card treatment as .panel: this carries real settings
      controls, so it leans more opaque and relies on blur to stay legible. */
   background: color-mix(in srgb, var(--obr-bg-paper, #f7f6f3) var(--obr-glass-card, 95%), transparent);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--obr-border, rgba(0, 0, 0, 0.12));
-  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--obr-primary, #6a4fb6) 45%, var(--obr-border, rgba(0, 0, 0, 0.12)));
+  border-radius: 14px;
   padding: 16px;
+  /* A soft purple glow around the panel, echoing the same reference. */
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--obr-primary, #6a4fb6) 20%, transparent),
+    0 8px 24px rgba(0, 0, 0, 0.35);
 }
 
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
@@ -453,13 +459,145 @@
 
 .modal-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 
 .modal-header h2 {
   margin: 0;
-  font-size: 15px;
+  font-size: 17px;
+}
+
+.modal-subtitle {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--obr-text-secondary, #666);
+}
+
+.icon-button-row {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.setting-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.setting-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 10px;
+  background: var(--obr-bg, #ffffff);
+  border: 1px solid var(--obr-border, rgba(0, 0, 0, 0.08));
+}
+
+.setting-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: color-mix(in srgb, var(--obr-primary, #6a4fb6) 15%, transparent);
+  color: var(--obr-primary, #6a4fb6);
+}
+
+.setting-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.setting-title {
+  margin: 0;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.setting-description {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--obr-text-secondary, #666);
+}
+
+.setting-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  padding-top: 3px;
+}
+
+.setting-number-input {
+  width: 52px;
+  text-align: center;
+}
+
+.setting-readout {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--obr-text-secondary, #666);
+}
+
+/* A real checkbox underneath (see SettingRow.tsx's Toggle), styled as a
+   pill switch. The input stays in normal layout — not display:none, not
+   visibility:hidden — so it's still focusable and keyboard-operable; it's
+   just visually replaced by the track/thumb siblings drawn on top of it. */
+.toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 36px;
+  height: 20px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.toggle input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.toggle-track {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: var(--obr-border, rgba(0, 0, 0, 0.2));
+  transition: background-color 0.15s ease;
+  pointer-events: none;
+}
+
+.toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  transition: transform 0.15s ease;
+}
+
+.toggle input:checked ~ .toggle-track {
+  background: var(--obr-primary, #6a4fb6);
+}
+
+.toggle input:checked ~ .toggle-track .toggle-thumb {
+  transform: translateX(16px);
+}
+
+.toggle input:focus-visible ~ .toggle-track {
+  outline: 2px solid var(--obr-primary, #6a4fb6);
+  outline-offset: 2px;
 }

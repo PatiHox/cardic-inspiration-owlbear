@@ -32,10 +32,15 @@ export function GearIcon() {
 }
 
 export function BugIcon() {
+  // Legs distributed at three different heights along an elongated body,
+  // not radiating from one center point — that's what reads as "insect"
+  // rather than "gear" at small sizes, where the two shapes otherwise
+  // collapse into the same silhouette.
   return (
     <IconBase>
-      <rect x="5" y="5.5" width="6" height="7" rx="3" />
-      <path d="M8 5.5V4M6.2 4.6 5.2 3.3M9.8 4.6l1-1.3M2.5 8.2h2.5M11 8.2h2.5M3.2 11.8l2-1.3M12.8 11.8l-2-1.3M3.2 5.4l2 1.4M12.8 5.4l-2 1.4" />
+      <ellipse cx="8" cy="9.2" rx="3" ry="3.8" />
+      <path d="M6.6 5.9 5.8 4.2M9.4 5.9l.8-1.7" />
+      <path d="M5 7.3H3M11 7.3h2M4.8 9.2H2.8M11.2 9.2h2M5 11.1H3M11 11.1h2" />
     </IconBase>
   );
 }

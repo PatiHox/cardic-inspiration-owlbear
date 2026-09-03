@@ -1,4 +1,9 @@
 import { useEffect, useRef, useState } from "react";
+import type { FaceCardScale } from "../deck/cards";
+import { BugIcon, CrownIcon, HandIcon } from "./icons";
+import { SettingRow, Toggle } from "./SettingRow";
+
+const BUG_REPORT_URL = "https://github.com/PatiHox/owlbear-ext/issues/new";
 
 interface SettingsModalProps {
   open: boolean;
@@ -6,9 +11,19 @@ interface SettingsModalProps {
   isGM: boolean;
   maxHandSize: number | null;
   onSetMaxHandSize: (max: number | null) => void;
+  faceCardScale: FaceCardScale;
+  onSetFaceCardScale: (scale: FaceCardScale) => void;
 }
 
-export function SettingsModal({ open, onClose, isGM, maxHandSize, onSetMaxHandSize }: SettingsModalProps) {
+export function SettingsModal({
+  open,
+  onClose,
+  isGM,
+  maxHandSize,
+  onSetMaxHandSize,
+  faceCardScale,
+  onSetFaceCardScale,
+}: SettingsModalProps) {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -33,25 +48,44 @@ export function SettingsModal({ open, onClose, isGM, maxHandSize, onSetMaxHandSi
         onClick={(e) => e.stopPropagation()}
       >
         <div className="modal-header">
-          <h2 id="settings-heading">Settings</h2>
-          <button
-            ref={closeButtonRef}
-            type="button"
-            className="btn btn-ghost btn-icon"
-            onClick={onClose}
-            aria-label="Close settings"
-          >
-            ✕
-          </button>
+          <div>
+            <h2 id="settings-heading">Settings</h2>
+            <p className="modal-subtitle">Cardic Inspiration</p>
+          </div>
+          <div className="icon-button-row">
+            <a
+              className="btn btn-ghost btn-icon"
+              href={BUG_REPORT_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Report a bug on GitHub (opens in a new tab)"
+              title="Report a bug"
+            >
+              <BugIcon />
+            </a>
+            <button
+              ref={closeButtonRef}
+              type="button"
+              className="btn btn-ghost btn-icon"
+              onClick={onClose}
+              aria-label="Close settings"
+              title="Close"
+            >
+              ✕
+            </button>
+          </div>
         </div>
 
-        <HandLimitSettings isGM={isGM} maxHandSize={maxHandSize} onSetMaxHandSize={onSetMaxHandSize} />
+        <div className="setting-list">
+          <HandLimitSetting isGM={isGM} maxHandSize={maxHandSize} onSetMaxHandSize={onSetMaxHandSize} />
+          <FaceCardScaleSetting isGM={isGM} scale={faceCardScale} onSetScale={onSetFaceCardScale} />
+        </div>
       </div>
     </div>
   );
 }
 
-function HandLimitSettings({
+function HandLimitSetting({
   isGM,
   maxHandSize,
   onSetMaxHandSize,
@@ -69,16 +103,6 @@ function HandLimitSettings({
     if (maxHandSize != null) setDraft(String(maxHandSize));
   }, [maxHandSize]);
 
-  if (!isGM) {
-    return (
-      <p className="hand-limit-readout">
-        {maxHandSize != null
-          ? `Hand limit: ${maxHandSize} card${maxHandSize === 1 ? "" : "s"}`
-          : "No hand limit set."}
-      </p>
-    );
-  }
-
   function apply(nextEnabled: boolean, nextDraft: string) {
     if (!nextEnabled) {
       onSetMaxHandSize(null);
@@ -88,23 +112,32 @@ function HandLimitSettings({
     if (Number.isFinite(n) && n > 0) onSetMaxHandSize(n);
   }
 
+  if (!isGM) {
+    return (
+      <SettingRow
+        icon={<HandIcon />}
+        title="Limit cards per hand"
+        description={
+          maxHandSize != null
+            ? `The DM has capped hands at ${maxHandSize} card${maxHandSize === 1 ? "" : "s"}.`
+            : "No limit set by the DM."
+        }
+      >
+        <span className="setting-readout">{maxHandSize ?? "Off"}</span>
+      </SettingRow>
+    );
+  }
+
   return (
-    <div className="hand-limit-settings">
-      <label className="checkbox-label">
-        <input
-          type="checkbox"
-          checked={enabled}
-          onChange={(e) => {
-            setEnabled(e.target.checked);
-            apply(e.target.checked, draft);
-          }}
-        />
-        Limit cards per hand
-      </label>
+    <SettingRow
+      icon={<HandIcon />}
+      title="Limit cards per hand"
+      description="Cap how many cards a player can hold across all decks at once."
+    >
       {enabled && (
         <input
           type="number"
-          className="text-input hand-limit-input"
+          className="text-input setting-number-input"
           aria-label="Max cards per hand"
           min={1}
           value={draft}
@@ -113,6 +146,47 @@ function HandLimitSettings({
           onKeyDown={(e) => e.key === "Enter" && apply(enabled, draft)}
         />
       )}
-    </div>
+      <Toggle
+        checked={enabled}
+        onChange={(next) => {
+          setEnabled(next);
+          apply(next, draft);
+        }}
+        label="Limit cards per hand"
+      />
+    </SettingRow>
+  );
+}
+
+function FaceCardScaleSetting({
+  isGM,
+  scale,
+  onSetScale,
+}: {
+  isGM: boolean;
+  scale: FaceCardScale;
+  onSetScale: (scale: FaceCardScale) => void;
+}) {
+  const isOrdinal = scale === "ordinal";
+  const description = isOrdinal
+    ? "J/Q/K keep their ordinal value: J = +11, Q = +12, K = +13."
+    : "J/Q/K are all worth a flat +10, same as a 10.";
+
+  if (!isGM) {
+    return (
+      <SettingRow icon={<CrownIcon />} title="Face card value" description={description}>
+        <span className="setting-readout">{isOrdinal ? "11–13" : "+10"}</span>
+      </SettingRow>
+    );
+  }
+
+  return (
+    <SettingRow icon={<CrownIcon />} title="Face card value" description={description}>
+      <Toggle
+        checked={isOrdinal}
+        onChange={(next) => onSetScale(next ? "ordinal" : "cap10")}
+        label="Use J/Q/K's ordinal value instead of a flat +10"
+      />
+    </SettingRow>
   );
 }
