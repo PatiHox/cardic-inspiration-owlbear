@@ -71,7 +71,7 @@ enabled for the repo (Settings → Pages → Source: GitHub Actions), the
 extension's manifest will be available at:
 
 ```
-https://<your-github-username>.github.io/owlbear-ext/manifest.json
+https://<your-github-username>.github.io/cardic-inspiration-owlbear/manifest.json
 ```
 
 Use that URL as the install link instead of the localhost one. If you
@@ -87,7 +87,7 @@ resolve against the extension's own origin rather than resolving them
 itself; a bare relative path like `"icon.svg"` or `"./"` throws
 `Failed to construct 'URL': Invalid URL` inside Owlbear Rodeo. That's
 correct for local dev (served from the origin root), but wrong once
-deployed under GitHub Pages' `/owlbear-ext/` subpath. `npm run build` runs
+deployed under GitHub Pages' `/cardic-inspiration-owlbear/` subpath. `npm run build` runs
 [`scripts/rebase-manifest.mjs`](scripts/rebase-manifest.mjs) after `vite
 build` to prefix those paths with `REPO_BASE` in the built
 `dist/manifest.json` only — the source file in `public/` is untouched.

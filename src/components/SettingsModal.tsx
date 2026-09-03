@@ -3,7 +3,7 @@ import type { FaceCardScale } from "../deck/cards";
 import { BugIcon, CrownIcon, HandIcon } from "./icons";
 import { SettingRow, Toggle } from "./SettingRow";
 
-const BUG_REPORT_URL = "https://github.com/PatiHox/owlbear-ext/issues/new";
+const BUG_REPORT_URL = "https://github.com/PatiHox/cardic-inspiration-owlbear/issues/new";
 
 interface SettingsModalProps {
   open: boolean;

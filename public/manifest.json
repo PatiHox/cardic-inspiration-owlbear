@@ -1,9 +1,9 @@
 {
   "name": "Cardic Inspiration",
-  "version": "1.5.2",
+  "version": "1.5.3",
   "manifest_version": 1,
   "description": "Track shared card-draw inspiration decks for your table. Written entirely by AI (Claude Code).",
-  "homepage_url": "https://github.com/PatiHox/owlbear-ext",
+  "homepage_url": "https://github.com/PatiHox/cardic-inspiration-owlbear",
   "icon": "/icon.svg",
   "action": {
     "title": "Cardic Inspiration",
