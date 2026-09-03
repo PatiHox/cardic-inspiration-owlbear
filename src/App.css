@@ -437,9 +437,11 @@
   width: 100%;
   max-width: 300px;
   overflow-y: auto;
-  /* Same --obr-glass-card treatment as .panel: this carries real settings
-     controls, so it leans more opaque and relies on blur to stay legible. */
-  background: color-mix(in srgb, var(--obr-bg-paper, #f7f6f3) var(--obr-glass-card, 95%), transparent);
+  /* Its own --obr-glass-modal, not the ambient --obr-glass-card: this is a
+     focused reading surface someone opens specifically to read and change
+     values, not background decoration behind gameplay, so it prioritizes
+     legibility over matching the scene through it. */
+  background: color-mix(in srgb, var(--obr-bg-paper, #f7f6f3) var(--obr-glass-modal, 96%), transparent);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid color-mix(in srgb, var(--obr-primary, #6a4fb6) 45%, var(--obr-border, rgba(0, 0, 0, 0.12)));

@@ -49,6 +49,15 @@ function themeVars(theme: Theme | null): CSSProperties {
     // the actual data and rely on blur, not just alpha, to stay legible.
     "--obr-glass-shell": theme.mode === "DARK" ? "55%" : "30%",
     "--obr-glass-card": theme.mode === "DARK" ? "82%" : "70%",
+    // The Settings dialog is a focused reading surface, not ambient
+    // background like .app/.panel — someone opens it specifically to read
+    // and change values, so it should prioritize legibility over matching
+    // the scene through it. Reported as "really hard to look at" at
+    // --obr-glass-card's level; re-checking the reference screenshot, its
+    // dialog is close to opaque too (the glow border carries the "glass"
+    // character, not visible scene bleed-through). Its own, much higher
+    // floor, not shared with the ambient panels.
+    "--obr-glass-modal": theme.mode === "DARK" ? "96%" : "95%",
   } as CSSProperties;
 }
 
