@@ -104,3 +104,7 @@ src/obr/useOwlbear.ts          Hook wrapping the OBR SDK: ready state, player/ro
                                 party roster, theme, and synced deck state
 src/components/                UI: stack list, DM controls, per-player hands
 ```
+
+## License
+
+[MIT](LICENSE)
