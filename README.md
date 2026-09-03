@@ -18,8 +18,12 @@ value and use it as a bonus on a roll. There's no automatic roll integration
   shows, which is enough for a table of friends but not a hard guarantee
   (nothing stops someone from reading the room metadata directly via
   devtools).
-- Once flipped, the card's rank/suit is visible to everyone. After it's been
-  used, the player discards it, returning it to that deck's discard pile.
+- Once flipped, the card's rank/suit is visible to everyone, annotated with
+  the roll bonus it's worth (ace-high: 2-10 face value, J = +11, Q = +12,
+  K = +13, A = +14; a joker shows "Wild" instead of a fixed number). Edit
+  `RANK_BONUS` in [`src/deck/cards.ts`](src/deck/cards.ts) if your table
+  plays a different scale (e.g. ace-low, A = +1). After it's been used, the
+  player discards it, returning it to that deck's discard pile.
 - DM-only controls: create/rename/delete a deck, shuffle its draw pile, and
   "reset" a deck (shuffles the discard pile and any outstanding hands back
   into the draw pile).

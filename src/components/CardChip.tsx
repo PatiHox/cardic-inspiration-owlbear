@@ -1,4 +1,4 @@
-import { cardColor, cardLabel, type CardId } from "../deck/cards";
+import { cardBonusLabel, cardColor, cardLabel, type CardId } from "../deck/cards";
 
 interface CardChipProps {
   cardId: CardId;
@@ -15,12 +15,14 @@ export function CardChip({ cardId, revealed }: CardChipProps) {
     );
   }
   const color = cardColor(cardId);
+  const bonusLabel = cardBonusLabel(cardId);
   return (
     <span
       className={`card-chip card-chip--face card-chip--${color}`}
-      title={cardLabel(cardId)}
+      title={`${cardLabel(cardId)} (${bonusLabel})`}
     >
-      {cardLabel(cardId)}
+      <span className="card-chip-rank">{cardLabel(cardId)}</span>
+      <span className="card-chip-bonus">{bonusLabel}</span>
     </span>
   );
 }

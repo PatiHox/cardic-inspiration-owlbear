@@ -42,6 +42,26 @@ export const RANKS = [
 ] as const;
 export type Rank = (typeof RANKS)[number];
 
+/**
+ * The roll bonus each rank is worth, ace-high: 2-10 face value, J=11, Q=12,
+ * K=13, A=14. Change this if your table plays ace-low (A=1) instead.
+ */
+const RANK_BONUS: Record<Rank, number> = {
+  A: 14,
+  "2": 2,
+  "3": 3,
+  "4": 4,
+  "5": 5,
+  "6": 6,
+  "7": 7,
+  "8": 8,
+  "9": 9,
+  "10": 10,
+  J: 11,
+  Q: 12,
+  K: 13,
+};
+
 /** Build the 52 card ids for a full deck, optionally with 2 jokers. */
 export function createDeck(includeJokers: boolean): CardId[] {
   const cards: CardId[] = [];
@@ -73,6 +93,19 @@ export function cardLabel(cardId: CardId): string {
   const parsed = parseCard(cardId);
   if (!parsed) return cardId;
   return `${parsed.rank}${SUIT_SYMBOL[parsed.suit]}`;
+}
+
+/** The numeric roll bonus for a card, or null for a joker (no fixed value). */
+export function cardBonus(cardId: CardId): number | null {
+  if (isJoker(cardId)) return null;
+  const parsed = parseCard(cardId);
+  return parsed ? RANK_BONUS[parsed.rank] : null;
+}
+
+/** Short annotation for a revealed card's bonus, e.g. "+11", or "Wild" for a joker. */
+export function cardBonusLabel(cardId: CardId): string {
+  const bonus = cardBonus(cardId);
+  return bonus === null ? "Wild" : `+${bonus}`;
 }
 
 /** "red" | "black" for styling a revealed card face; jokers render black. */

@@ -229,7 +229,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 34px;
+  min-width: 38px;
   height: 44px;
   padding: 0 6px;
   border-radius: 6px;
@@ -251,6 +251,8 @@
 }
 
 .card-chip--face {
+  flex-direction: column;
+  gap: 1px;
   background: #ffffff;
 }
 
@@ -260,4 +262,16 @@
 
 .card-chip--face.card-chip--black {
   color: #1a1a1a;
+}
+
+.card-chip-rank {
+  font-size: 13px;
+  line-height: 1;
+}
+
+.card-chip-bonus {
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  opacity: 0.75;
 }
