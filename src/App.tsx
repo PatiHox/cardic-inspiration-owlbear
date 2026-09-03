@@ -8,8 +8,10 @@ import {
   drawCard,
   ensureDefaultStack,
   flipCard,
+  handSize,
   renameStack,
   resetStack,
+  setMaxHandSize,
   shuffleStack,
 } from "./deck/state";
 import { StackList } from "./components/StackList";
@@ -63,6 +65,8 @@ export default function App() {
       <StackList
         stacks={deckState.stacks}
         isGM={isGM}
+        maxHandSize={deckState.maxHandSize}
+        myHandSize={handSize(deckState, self.id)}
         onDraw={(stackId) => updateState((s) => drawCard(s, stackId, self))}
         onShuffle={(stackId) => updateState((s) => shuffleStack(s, stackId))}
         onReset={(stackId) => updateState((s) => resetStack(s, stackId))}
@@ -71,11 +75,13 @@ export default function App() {
         onCreate={(name, includeJokers, deckSizeId) =>
           updateState((s) => createStack(s, name, includeJokers, deckSizeId))
         }
+        onSetMaxHandSize={(max) => updateState((s) => setMaxHandSize(s, max))}
       />
 
       <HandsBoard
         drawnCards={deckState.drawnCards}
         selfId={self.id}
+        maxHandSize={deckState.maxHandSize}
         onFlip={(drawnCardId) => updateState((s) => flipCard(s, drawnCardId))}
         onDiscard={(drawnCardId) => updateState((s) => discardCard(s, drawnCardId))}
       />

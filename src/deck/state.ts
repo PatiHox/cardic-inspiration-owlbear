@@ -37,6 +37,8 @@ export interface DeckState {
   drawnCards: DrawnCard[];
   /** Has the one-time default deck already been created for this room? */
   initialized: boolean;
+  /** Max cards a single player may hold across all decks at once, or null for no limit. */
+  maxHandSize: number | null;
 }
 
 export const EMPTY_STATE: DeckState = {
@@ -44,6 +46,7 @@ export const EMPTY_STATE: DeckState = {
   stacks: [],
   drawnCards: [],
   initialized: false,
+  maxHandSize: null,
 };
 
 /** Namespaced room-metadata key, per OBR's recommended reverse-DNS convention. */
@@ -146,6 +149,22 @@ export interface PlayerRef {
   color: string;
 }
 
+/** How many cards `playerId` currently holds across every deck. */
+export function handSize(state: DeckState, playerId: string): number {
+  return state.drawnCards.filter((d) => d.playerId === playerId).length;
+}
+
+/** Has `playerId` reached the configured max-hand-size (always false when unset)? */
+export function isHandFull(state: DeckState, playerId: string): boolean {
+  return state.maxHandSize != null && handSize(state, playerId) >= state.maxHandSize;
+}
+
+/** DM setting: cap on cards a single player may hold at once. `max` <= 0 or null clears it. */
+export function setMaxHandSize(state: DeckState, max: number | null): DeckState {
+  const normalized = max != null && Number.isFinite(max) && max > 0 ? Math.floor(max) : null;
+  return { ...state, maxHandSize: normalized };
+}
+
 /** Draw the top card of a stack's draw pile into `player`'s hand. */
 export function drawCard(
   state: DeckState,
@@ -154,6 +173,7 @@ export function drawCard(
 ): DeckState {
   const stack = state.stacks.find((s) => s.id === stackId);
   if (!stack || stack.drawPile.length === 0) return state;
+  if (isHandFull(state, player.id)) return state;
 
   const drawPile = stack.drawPile.slice();
   const cardId = drawPile.pop()!;

@@ -190,6 +190,23 @@
   font-size: 13px;
 }
 
+.hand-limit-settings {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.hand-limit-input {
+  width: 56px;
+}
+
+.hand-limit-readout {
+  margin: 0 0 10px;
+  font-size: 12px;
+  color: var(--obr-text-secondary, #666);
+}
+
 .select-label {
   display: flex;
   flex-direction: column;

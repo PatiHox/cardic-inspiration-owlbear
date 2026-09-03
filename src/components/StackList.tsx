@@ -1,33 +1,45 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { DECK_PRESETS, DEFAULT_DECK_PRESET_ID, deckPreset } from "../deck/cards";
 import type { Stack } from "../deck/state";
 
 interface StackListProps {
   stacks: Stack[];
   isGM: boolean;
+  /** DM-configured cap on cards a single player may hold at once, or null for no limit. */
+  maxHandSize: number | null;
+  /** How many cards the current viewer is holding right now, across all decks. */
+  myHandSize: number;
   onDraw: (stackId: string) => void;
   onShuffle: (stackId: string) => void;
   onReset: (stackId: string) => void;
   onRename: (stackId: string, name: string) => void;
   onDelete: (stackId: string) => void;
   onCreate: (name: string, includeJokers: boolean, deckSizeId: string) => void;
+  onSetMaxHandSize: (max: number | null) => void;
 }
 
 export function StackList({
   stacks,
   isGM,
+  maxHandSize,
+  myHandSize,
   onDraw,
   onShuffle,
   onReset,
   onRename,
   onDelete,
   onCreate,
+  onSetMaxHandSize,
 }: StackListProps) {
+  const atHandLimit = maxHandSize != null && myHandSize >= maxHandSize;
+
   return (
     <section className="panel" aria-labelledby="decks-heading">
       <h2 id="decks-heading" className="panel-title">
         Decks
       </h2>
+
+      <HandLimitSettings isGM={isGM} maxHandSize={maxHandSize} onSetMaxHandSize={onSetMaxHandSize} />
 
       {stacks.length === 0 && (
         <p className="empty-state">
@@ -43,6 +55,8 @@ export function StackList({
             key={stack.id}
             stack={stack}
             isGM={isGM}
+            drawDisabled={stack.drawPile.length === 0 || atHandLimit}
+            drawTitle={atHandLimit ? `Hand limit reached (max ${maxHandSize})` : undefined}
             onDraw={() => onDraw(stack.id)}
             onShuffle={() => onShuffle(stack.id)}
             onReset={() => onReset(stack.id)}
@@ -57,9 +71,75 @@ export function StackList({
   );
 }
 
+function HandLimitSettings({
+  isGM,
+  maxHandSize,
+  onSetMaxHandSize,
+}: {
+  isGM: boolean;
+  maxHandSize: number | null;
+  onSetMaxHandSize: (max: number | null) => void;
+}) {
+  const [enabled, setEnabled] = useState(maxHandSize != null);
+  const [draft, setDraft] = useState(maxHandSize != null ? String(maxHandSize) : "5");
+
+  // Stay in sync if another GM client changes this (or on first load).
+  useEffect(() => {
+    setEnabled(maxHandSize != null);
+    if (maxHandSize != null) setDraft(String(maxHandSize));
+  }, [maxHandSize]);
+
+  if (!isGM) {
+    return maxHandSize != null ? (
+      <p className="hand-limit-readout">
+        Hand limit: {maxHandSize} card{maxHandSize === 1 ? "" : "s"}
+      </p>
+    ) : null;
+  }
+
+  function apply(nextEnabled: boolean, nextDraft: string) {
+    if (!nextEnabled) {
+      onSetMaxHandSize(null);
+      return;
+    }
+    const n = parseInt(nextDraft, 10);
+    if (Number.isFinite(n) && n > 0) onSetMaxHandSize(n);
+  }
+
+  return (
+    <div className="hand-limit-settings">
+      <label className="checkbox-label">
+        <input
+          type="checkbox"
+          checked={enabled}
+          onChange={(e) => {
+            setEnabled(e.target.checked);
+            apply(e.target.checked, draft);
+          }}
+        />
+        Limit cards per hand
+      </label>
+      {enabled && (
+        <input
+          type="number"
+          className="text-input hand-limit-input"
+          aria-label="Max cards per hand"
+          min={1}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={() => apply(enabled, draft)}
+          onKeyDown={(e) => e.key === "Enter" && apply(enabled, draft)}
+        />
+      )}
+    </div>
+  );
+}
+
 interface StackRowProps {
   stack: Stack;
   isGM: boolean;
+  drawDisabled: boolean;
+  drawTitle: string | undefined;
   onDraw: () => void;
   onShuffle: () => void;
   onReset: () => void;
@@ -67,7 +147,17 @@ interface StackRowProps {
   onDelete: () => void;
 }
 
-function StackRow({ stack, isGM, onDraw, onShuffle, onReset, onRename, onDelete }: StackRowProps) {
+function StackRow({
+  stack,
+  isGM,
+  drawDisabled,
+  drawTitle,
+  onDraw,
+  onShuffle,
+  onReset,
+  onRename,
+  onDelete,
+}: StackRowProps) {
   const [editing, setEditing] = useState(false);
   const [draftName, setDraftName] = useState(stack.name);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -117,7 +207,7 @@ function StackRow({ stack, isGM, onDraw, onShuffle, onReset, onRename, onDelete 
       </div>
 
       <div className="stack-row-actions">
-        <button className="btn btn-primary" onClick={onDraw} disabled={stack.drawPile.length === 0}>
+        <button className="btn btn-primary" onClick={onDraw} disabled={drawDisabled} title={drawTitle}>
           Draw
         </button>
         {isGM && (
@@ -142,7 +232,7 @@ function StackRow({ stack, isGM, onDraw, onShuffle, onReset, onRename, onDelete 
                 </button>
               </>
             ) : (
-              <button className="btn btn-ghost" onClick={() => setConfirmingDelete(true)}>
+              <button className="btn btn-danger" onClick={() => setConfirmingDelete(true)}>
                 Delete
               </button>
             )}

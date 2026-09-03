@@ -4,6 +4,7 @@ import { CardChip } from "./CardChip";
 interface HandsBoardProps {
   drawnCards: DrawnCard[];
   selfId: string;
+  maxHandSize: number | null;
   onFlip: (drawnCardId: string) => void;
   onDiscard: (drawnCardId: string) => void;
 }
@@ -35,7 +36,7 @@ function groupByPlayer(drawnCards: DrawnCard[]): Hand[] {
   return order.map((id) => hands.get(id)!);
 }
 
-export function HandsBoard({ drawnCards, selfId, onFlip, onDiscard }: HandsBoardProps) {
+export function HandsBoard({ drawnCards, selfId, maxHandSize, onFlip, onDiscard }: HandsBoardProps) {
   const hands = groupByPlayer(drawnCards);
 
   return (
@@ -55,6 +56,7 @@ export function HandsBoard({ drawnCards, selfId, onFlip, onDiscard }: HandsBoard
               <span className="player-swatch" style={{ background: hand.playerColor }} />
               <span className="player-name">
                 {hand.playerId === selfId ? `${hand.playerName} (you)` : hand.playerName}
+                {maxHandSize != null && ` — ${hand.cards.length}/${maxHandSize}`}
               </span>
             </div>
             <div className="hand-cards">
