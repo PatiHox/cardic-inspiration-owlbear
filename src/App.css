@@ -356,12 +356,16 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 38px;
-  height: 44px;
-  padding: 0 6px;
-  border-radius: 6px;
+  /* Fixed, not min-width: every chip is the same size regardless of its
+     content. The ace's "Crit / +10" label is meaningfully longer than
+     "+8"/"+12"/etc — with min-width that card alone stretched wider than
+     its neighbors; now the longer label wraps onto a second line inside
+     the same fixed box instead (see .card-chip-bonus below). */
+  width: 48px;
+  height: 56px;
+  padding: 2px;
+  border-radius: 7px;
   font-weight: 700;
-  font-size: 13px;
   border: 1px solid var(--obr-border, rgba(0, 0, 0, 0.15));
 }
 
@@ -390,14 +394,15 @@
 }
 
 .card-chip-rank {
-  font-size: 13px;
+  font-size: 16px;
   line-height: 1;
 }
 
 .card-chip-bonus {
   font-size: 10px;
   font-weight: 600;
-  line-height: 1;
+  line-height: 1.15;
+  text-align: center;
   /* No opacity fade here: at 0.75 the red suit color (#c0392b) drops to a
      3.54:1 contrast against the white card face, below the 4.5:1 WCAG AA
      minimum for text (verified against the rendered page). Full-strength
