@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "manifest_version": 1,
   "description": "Track shared card-draw inspiration decks for your table.",
+  "homepage_url": "https://github.com/PatiHox/owlbear-ext",
   "icon": "/icon.svg",
   "action": {
     "title": "Inspiration Cards",
