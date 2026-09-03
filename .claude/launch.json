@@ -6,6 +6,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
       "port": 5173
+    },
+    {
+      "name": "owlbear-ext-dev-alt",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["vite", "--port", "5180"],
+      "port": 5180
     }
   ]
 }

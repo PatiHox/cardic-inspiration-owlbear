@@ -1,4 +1,4 @@
-import { useEffect, type CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import type { Theme } from "@owlbear-rodeo/sdk";
 import { useOwlbear } from "./obr/useOwlbear";
 import {
@@ -16,6 +16,7 @@ import {
 } from "./deck/state";
 import { StackList } from "./components/StackList";
 import { HandsBoard } from "./components/HandsBoard";
+import { SettingsModal } from "./components/SettingsModal";
 import "./App.css";
 
 function themeVars(theme: Theme | null): CSSProperties {
@@ -52,6 +53,7 @@ function themeVars(theme: Theme | null): CSSProperties {
 export default function App() {
   const { ready, self, theme, deckState, updateState } = useOwlbear();
   const isGM = ready && self?.role === "GM";
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   // One-time setup: give a fresh room a standard deck to start with, so
   // players aren't staring at an empty list before the DM builds one. Only
@@ -75,9 +77,18 @@ export default function App() {
       <header className="app-header">
         <img src={`${import.meta.env.BASE_URL}icon.svg`} alt="" className="app-icon" />
         <div>
-          <h1>Inspiration Cards</h1>
+          <h1>Cardic Inspiration</h1>
           <p className="app-subtitle">{isGM ? "DM view" : "Player view"}</p>
         </div>
+        <button
+          type="button"
+          className="btn btn-ghost btn-icon app-settings-toggle"
+          onClick={() => setSettingsOpen(true)}
+          aria-label="Open settings"
+          title="Settings"
+        >
+          ⚙
+        </button>
       </header>
 
       <StackList
@@ -93,7 +104,6 @@ export default function App() {
         onCreate={(name, includeJokers, deckSizeId) =>
           updateState((s) => createStack(s, name, includeJokers, deckSizeId))
         }
-        onSetMaxHandSize={(max) => updateState((s) => setMaxHandSize(s, max))}
       />
 
       <HandsBoard
@@ -102,6 +112,14 @@ export default function App() {
         maxHandSize={deckState.maxHandSize}
         onFlip={(drawnCardId) => updateState((s) => flipCard(s, drawnCardId))}
         onDiscard={(drawnCardId) => updateState((s) => discardCard(s, drawnCardId))}
+      />
+
+      <SettingsModal
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        isGM={isGM}
+        maxHandSize={deckState.maxHandSize}
+        onSetMaxHandSize={(max) => updateState((s) => setMaxHandSize(s, max))}
       />
     </div>
   );

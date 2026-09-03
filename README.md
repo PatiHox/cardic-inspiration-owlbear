@@ -1,4 +1,4 @@
-# Inspiration Cards
+# Cardic Inspiration
 
 > **AI use disclosure:** This extension was written entirely by an AI
 > coding agent. See [AI_DISCLOSURE.md](AI_DISCLOSURE.md) for details.
@@ -22,14 +22,22 @@ value and use it as a bonus on a roll. There's no automatic roll integration
   (nothing stops someone from reading the room metadata directly via
   devtools).
 - Once flipped, the card's rank/suit is visible to everyone, annotated with
-  the roll bonus it's worth (ace-high: 2-10 face value, J = +11, Q = +12,
-  K = +13, A = +14; a joker shows "Wild" instead of a fixed number). Edit
-  `RANK_BONUS` in [`src/deck/cards.ts`](src/deck/cards.ts) if your table
-  plays a different scale (e.g. ace-low, A = +1). After it's been used, the
+  what it's worth:
+  - Number cards (2-10) hold their face value.
+  - Face cards (J/Q/K) are a flat **+10**.
+  - An **ace** is a critical hit where the roll allows one, otherwise **+10**
+    (shown as "Crit / +10" — the extension doesn't know what roll it's for,
+    so it can't decide this automatically; the player/DM applies whichever
+    half is relevant at the table).
+  - **Jokers are wild** — no fixed effect, entirely up to the DM.
+
+  Edit `cardBonus`/`cardBonusLabel` in [`src/deck/cards.ts`](src/deck/cards.ts)
+  if your table plays a different scale. After a card's been used, the
   player discards it, returning it to that deck's discard pile.
-- DM-only controls: create/rename/delete a deck, shuffle its draw pile, and
+- DM-only controls: create/rename/delete a deck, shuffle its draw pile,
   "reset" a deck (shuffles the discard pile and any outstanding hands back
-  into the draw pile).
+  into the draw pile), and — via the ⚙ **Settings** popup — cap how many
+  cards a single player may hold across all decks at once.
 
 All state lives in the Owlbear Rodeo room's metadata, which OBR syncs live
 to every connected client — that's what makes the popover "shared": every

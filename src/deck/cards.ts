@@ -43,24 +43,14 @@ export const RANKS = [
 export type Rank = (typeof RANKS)[number];
 
 /**
- * The roll bonus each rank is worth, ace-high: 2-10 face value, J=11, Q=12,
- * K=13, A=14. Change this if your table plays ace-low (A=1) instead.
+ * What a revealed card is worth: a flat numeric bonus, the ace's special
+ * "critical hit if applicable, otherwise +10" case, or a joker's wild card
+ * (no fixed effect — up to the DM).
  */
-const RANK_BONUS: Record<Rank, number> = {
-  A: 14,
-  "2": 2,
-  "3": 3,
-  "4": 4,
-  "5": 5,
-  "6": 6,
-  "7": 7,
-  "8": 8,
-  "9": 9,
-  "10": 10,
-  J: 11,
-  Q: 12,
-  K: 13,
-};
+export type CardBonus =
+  | { kind: "value"; amount: number }
+  | { kind: "ace" }
+  | { kind: "wild" };
 
 /** The 6-A short deck used by Six Plus Hold'em and by Schnapsen/Sixty-Six. */
 const SHORT_DECK_RANKS: readonly Rank[] = ["6", "7", "8", "9", "10", "J", "Q", "K", "A"];
@@ -139,17 +129,46 @@ export function cardLabel(cardId: CardId): string {
   return `${parsed.rank}${SUIT_SYMBOL[parsed.suit]}`;
 }
 
-/** The numeric roll bonus for a card, or null for a joker (no fixed value). */
-export function cardBonus(cardId: CardId): number | null {
-  if (isJoker(cardId)) return null;
+/**
+ * What a card is worth: number cards hold their face value, face cards
+ * (J/Q/K) are a flat +10, an ace is a critical hit where the roll allows
+ * one (otherwise +10), and jokers are wild — no fixed effect, up to the DM.
+ */
+export function cardBonus(cardId: CardId): CardBonus {
+  if (isJoker(cardId)) return { kind: "wild" };
   const parsed = parseCard(cardId);
-  return parsed ? RANK_BONUS[parsed.rank] : null;
+  if (!parsed) return { kind: "wild" };
+  if (parsed.rank === "A") return { kind: "ace" };
+  if (parsed.rank === "J" || parsed.rank === "Q" || parsed.rank === "K") {
+    return { kind: "value", amount: 10 };
+  }
+  return { kind: "value", amount: Number(parsed.rank) };
 }
 
-/** Short annotation for a revealed card's bonus, e.g. "+11", or "Wild" for a joker. */
+/** Short on-card annotation, e.g. "+7", "+10", "Crit / +10", or "Wild". */
 export function cardBonusLabel(cardId: CardId): string {
   const bonus = cardBonus(cardId);
-  return bonus === null ? "Wild" : `+${bonus}`;
+  switch (bonus.kind) {
+    case "value":
+      return `+${bonus.amount}`;
+    case "ace":
+      return "Crit / +10";
+    case "wild":
+      return "Wild";
+  }
+}
+
+/** Longer description for a tooltip, spelling out the ace/joker special cases. */
+export function cardBonusDescription(cardId: CardId): string {
+  const bonus = cardBonus(cardId);
+  switch (bonus.kind) {
+    case "value":
+      return `+${bonus.amount}`;
+    case "ace":
+      return "Critical hit if applicable, otherwise +10";
+    case "wild":
+      return "Wild card — up to the DM";
+  }
 }
 
 /** "red" | "black" for styling a revealed card face; jokers render black. */

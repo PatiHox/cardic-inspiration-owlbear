@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { DECK_PRESETS, DEFAULT_DECK_PRESET_ID, deckPreset } from "../deck/cards";
 import type { Stack } from "../deck/state";
 
@@ -15,7 +15,6 @@ interface StackListProps {
   onRename: (stackId: string, name: string) => void;
   onDelete: (stackId: string) => void;
   onCreate: (name: string, includeJokers: boolean, deckSizeId: string) => void;
-  onSetMaxHandSize: (max: number | null) => void;
 }
 
 export function StackList({
@@ -29,7 +28,6 @@ export function StackList({
   onRename,
   onDelete,
   onCreate,
-  onSetMaxHandSize,
 }: StackListProps) {
   const atHandLimit = maxHandSize != null && myHandSize >= maxHandSize;
 
@@ -38,8 +36,6 @@ export function StackList({
       <h2 id="decks-heading" className="panel-title">
         Decks
       </h2>
-
-      <HandLimitSettings isGM={isGM} maxHandSize={maxHandSize} onSetMaxHandSize={onSetMaxHandSize} />
 
       {stacks.length === 0 && (
         <p className="empty-state">
@@ -68,70 +64,6 @@ export function StackList({
 
       {isGM && <NewStackForm onCreate={onCreate} />}
     </section>
-  );
-}
-
-function HandLimitSettings({
-  isGM,
-  maxHandSize,
-  onSetMaxHandSize,
-}: {
-  isGM: boolean;
-  maxHandSize: number | null;
-  onSetMaxHandSize: (max: number | null) => void;
-}) {
-  const [enabled, setEnabled] = useState(maxHandSize != null);
-  const [draft, setDraft] = useState(maxHandSize != null ? String(maxHandSize) : "5");
-
-  // Stay in sync if another GM client changes this (or on first load).
-  useEffect(() => {
-    setEnabled(maxHandSize != null);
-    if (maxHandSize != null) setDraft(String(maxHandSize));
-  }, [maxHandSize]);
-
-  if (!isGM) {
-    return maxHandSize != null ? (
-      <p className="hand-limit-readout">
-        Hand limit: {maxHandSize} card{maxHandSize === 1 ? "" : "s"}
-      </p>
-    ) : null;
-  }
-
-  function apply(nextEnabled: boolean, nextDraft: string) {
-    if (!nextEnabled) {
-      onSetMaxHandSize(null);
-      return;
-    }
-    const n = parseInt(nextDraft, 10);
-    if (Number.isFinite(n) && n > 0) onSetMaxHandSize(n);
-  }
-
-  return (
-    <div className="hand-limit-settings">
-      <label className="checkbox-label">
-        <input
-          type="checkbox"
-          checked={enabled}
-          onChange={(e) => {
-            setEnabled(e.target.checked);
-            apply(e.target.checked, draft);
-          }}
-        />
-        Limit cards per hand
-      </label>
-      {enabled && (
-        <input
-          type="number"
-          className="text-input hand-limit-input"
-          aria-label="Max cards per hand"
-          min={1}
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onBlur={() => apply(enabled, draft)}
-          onKeyDown={(e) => e.key === "Enter" && apply(enabled, draft)}
-        />
-      )}
-    </div>
   );
 }
 
