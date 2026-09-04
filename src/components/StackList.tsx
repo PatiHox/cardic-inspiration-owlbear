@@ -156,53 +156,53 @@ function StackRow({
           )}
         </div>
 
-        <div className="stack-row-header-right">
-          <span className="stack-counts">
-            {stack.drawPile.length} left · {stack.discardPile.length} discarded
-          </span>
-          {/* Management controls docked to the row's own header, like a
-              window's title-bar buttons, rather than floating in the
-              content area next to the deck card — gives them a fixed home
-              tied to "this deck" instead of orphaned space beside the card. */}
-          {isGM && (
-            <div className="stack-row-titlebar-actions">
-              <button
-                className="btn-titlebar"
-                onClick={onShuffle}
-                aria-label="Shuffle the draw pile"
-                title="Shuffle the draw pile"
-              >
-                <ShuffleIcon />
-              </button>
-              <button
-                className="btn-titlebar"
-                onClick={() => setConfirmingReset(true)}
-                aria-label="Reset this deck"
-                title="Return discards and outstanding hands to the draw pile, then shuffle"
-              >
-                <ResetIcon />
-              </button>
-              <button
-                className="btn-titlebar btn-titlebar-danger"
-                onClick={() => setConfirmingDelete(true)}
-                aria-label="Delete this deck"
-                title="Delete this deck"
-              >
-                <TrashIcon />
-              </button>
-            </div>
-          )}
-        </div>
+        {/* Management controls docked to the row's own header, like a
+            window's title-bar buttons, rather than floating in the content
+            area next to the deck card — gives them a fixed home tied to
+            "this deck" instead of orphaned space beside the card. The
+            counts used to live here as text; they're on the piles
+            themselves now (see .pile-count-badge below), so a player view
+            (no buttons) renders nothing on this side at all. */}
+        {isGM && (
+          <div className="stack-row-titlebar-actions">
+            <button
+              className="btn-titlebar"
+              onClick={onShuffle}
+              aria-label="Shuffle the draw pile"
+              title="Shuffle the draw pile"
+            >
+              <ShuffleIcon />
+            </button>
+            <button
+              className="btn-titlebar"
+              onClick={() => setConfirmingReset(true)}
+              aria-label="Reset this deck"
+              title="Return discards and outstanding hands to the draw pile, then shuffle"
+            >
+              <ResetIcon />
+            </button>
+            <button
+              className="btn-titlebar btn-titlebar-danger"
+              onClick={() => setConfirmingDelete(true)}
+              aria-label="Delete this deck"
+              title="Delete this deck"
+            >
+              <TrashIcon />
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="stack-row-actions">
         <DeckCardControl
           isGM={isGM}
+          drawPileCount={stack.drawPile.length}
           stackEmpty={stack.drawPile.length === 0}
           selfAtHandLimit={selfAtHandLimit}
           onDraw={onDraw}
           onDragStartStackId={() => stack.id}
         />
+        <DiscardPileView count={stack.discardPile.length} />
       </div>
 
       <ConfirmDialog
@@ -223,6 +223,31 @@ function StackRow({
         onCancel={() => setConfirmingDelete(false)}
       />
     </li>
+  );
+}
+
+/**
+ * The discard pile, sitting next to the draw pile — a muted, desaturated
+ * echo of the same card-back pattern (same deck, spent copies) with its
+ * own count badge, or a dashed empty slot at 0. Purely a readout, not
+ * interactive: there's no "undo a discard" action yet, so nothing here
+ * needs a click/drag handler.
+ */
+function DiscardPileView({ count }: { count: number }) {
+  const label = count === 0 ? "Discard pile: empty" : `Discard pile: ${count} card${count === 1 ? "" : "s"}`;
+  return (
+    <div
+      className={"discard-pile" + (count === 0 ? " discard-pile--empty" : "")}
+      role="img"
+      aria-label={label}
+      title={label}
+    >
+      {count > 0 && (
+        <span className="pile-count-badge" aria-hidden="true">
+          {count}
+        </span>
+      )}
+    </div>
   );
 }
 

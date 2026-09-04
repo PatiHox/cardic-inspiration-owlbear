@@ -169,15 +169,6 @@
   min-width: 0;
 }
 
-.stack-row-header-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  /* Fixed-position anchor for the row: always its full natural width,
-     never the side that gives up space to a long name. */
-  flex-shrink: 0;
-}
-
 .stack-name {
   font-weight: 600;
   /* The side that actually concedes space to keep the header-right group's
@@ -215,13 +206,14 @@
   flex-shrink: 0;
 }
 
-.stack-counts {
-  font-size: 12px;
-  color: var(--obr-text-secondary, #666);
-}
-
 .stack-row-actions {
+  /* Draw pile, then discard pile — same left-to-right order a real table
+     would have them in. flex-start (not stretch) and enough gap that a
+     count badge hanging off a pile's bottom-right corner has room before
+     the next pile starts. */
   display: flex;
+  align-items: flex-start;
+  gap: 14px;
 }
 
 .btn {
@@ -294,10 +286,15 @@
 
 .stack-row-titlebar-actions {
   /* Tight cluster, like a real title bar's control group — see
-     .btn-titlebar below. */
+     .btn-titlebar below. Only element on this side of the header now that
+     the counts moved onto the piles, but still needs its own fixed-width
+     anchor: without it, this being the sole flex-shrink:1 (default) item
+     next to .stack-row-title's min-width:0 would let it get squeezed
+     instead of the name conceding space first. */
   display: flex;
   align-items: center;
   gap: 2px;
+  flex-shrink: 0;
 }
 
 .btn-titlebar {
@@ -388,14 +385,13 @@
 }
 
 .deck-card-control {
-  /* Reuses .card-chip/.card-chip--back's striped background and border so
-     it reads as "a face-down card" at a glance — this literally is the
-     card being drawn or given — but smaller than a real hand card so it
-     sits level with the text buttons next to it (Shuffle/Reset/Delete). */
-  width: 28px;
-  height: 32px;
+  /* Reuses .card-chip/.card-chip--back's striped background, border and
+     48x56 size so it reads as "a face-down card" at a glance — this
+     literally is the card being drawn or given. position: relative so
+     .pile-count-badge (the draw-pile count) can anchor to its corner. */
   padding: 0;
   cursor: pointer;
+  position: relative;
 }
 
 .deck-card-control:hover:not(:disabled) {
@@ -405,6 +401,57 @@
 .deck-card-control:disabled {
   opacity: 0.4;
   cursor: default;
+}
+
+.pile-count-badge {
+  /* Classic notification-badge placement, hanging off the pile's own
+     corner. pointer-events: none so it never steals a click/drag meant
+     for the card underneath — it's decorative, the count also lives in
+     the pile's aria-label/title for anyone not reading it visually. */
+  position: absolute;
+  bottom: -6px;
+  right: -6px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--obr-primary, #6a4fb6);
+  color: var(--obr-primary-contrast, #fff);
+  border: 2px solid var(--obr-bg, #fff);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.discard-pile {
+  /* Same footprint as the draw pile so the two sit level, with a muted,
+     desaturated echo of its striped back — "spent copies of the same
+     deck" rather than a distinct object — and no border/background at
+     all when empty, matching the dashed-outline "nothing here yet"
+     language .new-stack-form and the rename hint already use elsewhere. */
+  width: 48px;
+  height: 56px;
+  border-radius: 7px;
+  border: 1px solid var(--obr-border, rgba(0, 0, 0, 0.15));
+  background: repeating-linear-gradient(
+    45deg,
+    var(--obr-text-secondary, #888),
+    var(--obr-text-secondary, #888) 4px,
+    var(--obr-bg-paper, #f7f6f3) 4px,
+    var(--obr-bg-paper, #f7f6f3) 8px
+  );
+  opacity: 0.5;
+  position: relative;
+}
+
+.discard-pile--empty {
+  border-style: dashed;
+  background: transparent;
+  opacity: 1;
 }
 
 .new-stack-total {

@@ -8,6 +8,10 @@ export const GIVE_CARD_DRAG_TYPE = "application/x-cardic-give-stack-id";
 
 interface DeckCardControlProps {
   isGM: boolean;
+  /** How many cards are left in the draw pile — shown as a badge on the
+   * card itself (0 renders no badge; the dimmed/disabled card already
+   * says "empty" on its own). */
+  drawPileCount: number;
   /** The stack's draw pile is empty — nothing to click or drag either way. */
   stackEmpty: boolean;
   /** The viewer's own hand is at the room's hand-size cap, carrying the
@@ -42,6 +46,7 @@ interface DeckCardControlProps {
  */
 export function DeckCardControl({
   isGM,
+  drawPileCount,
   stackEmpty,
   selfAtHandLimit,
   onDraw,
@@ -57,6 +62,11 @@ export function DeckCardControl({
   // else's row to give them the card.
   const canDrag = !stackEmpty && (isGM || canClick);
   const inert = !canClick && !canDrag;
+
+  // The card carries its own count as a visual badge now (no more "X left"
+  // text elsewhere), so the count needs to live in the accessible name too
+  // — otherwise it'd only ever reach sighted users.
+  const countLabel = stackEmpty ? "empty" : `${drawPileCount} left`;
 
   let title: string;
   if (stackEmpty) {
@@ -75,7 +85,7 @@ export function DeckCardControl({
       className="deck-card-control card-chip card-chip--back"
       disabled={inert}
       title={title}
-      aria-label="Draw a card"
+      aria-label={`Draw a card (${countLabel})`}
       draggable={canDrag}
       onDragStart={(e) => {
         e.dataTransfer.effectAllowed = "move";
@@ -84,6 +94,12 @@ export function DeckCardControl({
       onClick={() => {
         if (canClick) onDraw();
       }}
-    />
+    >
+      {drawPileCount > 0 && (
+        <span className="pile-count-badge" aria-hidden="true">
+          {drawPileCount}
+        </span>
+      )}
+    </button>
   );
 }
