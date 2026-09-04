@@ -175,15 +175,10 @@ export function setFaceCardScale(state: DeckState, scale: FaceCardScale): DeckSt
   return { ...state, faceCardScale: scale };
 }
 
-/** Draw the top card of a stack's draw pile into `player`'s hand. */
-export function drawCard(
-  state: DeckState,
-  stackId: string,
-  player: PlayerRef,
-): DeckState {
+/** Move the top card of a stack's draw pile into `player`'s hand, unconditionally. */
+function takeTopCard(state: DeckState, stackId: string, player: PlayerRef): DeckState {
   const stack = state.stacks.find((s) => s.id === stackId);
   if (!stack || stack.drawPile.length === 0) return state;
-  if (isHandFull(state, player.id)) return state;
 
   const drawPile = stack.drawPile.slice();
   const cardId = drawPile.pop()!;
@@ -206,6 +201,30 @@ export function drawCard(
     ),
     drawnCards: [...state.drawnCards, drawn],
   };
+}
+
+/** Draw the top card of a stack's draw pile into `player`'s hand. Blocked by the hand-size cap. */
+export function drawCard(
+  state: DeckState,
+  stackId: string,
+  player: PlayerRef,
+): DeckState {
+  if (isHandFull(state, player.id)) return state;
+  return takeTopCard(state, stackId, player);
+}
+
+/**
+ * DM action: hand the top card of a stack directly to `player`. Unlike
+ * `drawCard`, this ignores the room's hand-size cap — the DM is always
+ * allowed to give a player a card even if they're already at (or over)
+ * their limit.
+ */
+export function giveCard(
+  state: DeckState,
+  stackId: string,
+  player: PlayerRef,
+): DeckState {
+  return takeTopCard(state, stackId, player);
 }
 
 /** Flip a drawn card face-up. Should only be invoked by its owning player. */

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { DECK_PRESETS, DEFAULT_DECK_PRESET_ID, deckPreset } from "../deck/cards";
-import type { Stack } from "../deck/state";
+import type { Stack, PlayerRef } from "../deck/state";
+import { DeckCardControl } from "./DeckCardControl";
 
 interface StackListProps {
   stacks: Stack[];
@@ -9,6 +10,9 @@ interface StackListProps {
   maxHandSize: number | null;
   /** How many cards the current viewer is holding right now, across all decks. */
   myHandSize: number;
+  /** Other players in the room, for the DM's drag-to-give control. */
+  party: PlayerRef[];
+  /** Click a deck's card: draw it into the clicking player's own hand. */
   onDraw: (stackId: string) => void;
   onShuffle: (stackId: string) => void;
   onReset: (stackId: string) => void;
@@ -22,6 +26,7 @@ export function StackList({
   isGM,
   maxHandSize,
   myHandSize,
+  party,
   onDraw,
   onShuffle,
   onReset,
@@ -30,6 +35,9 @@ export function StackList({
   onCreate,
 }: StackListProps) {
   const atHandLimit = maxHandSize != null && myHandSize >= maxHandSize;
+  // Carries the actual limit number when capped, so DeckCardControl can put
+  // it in its tooltip without needing maxHandSize as a separate prop.
+  const selfAtHandLimit = atHandLimit ? maxHandSize! : false;
 
   return (
     <section className="panel" aria-labelledby="decks-heading">
@@ -51,8 +59,8 @@ export function StackList({
             key={stack.id}
             stack={stack}
             isGM={isGM}
-            drawDisabled={stack.drawPile.length === 0 || atHandLimit}
-            drawTitle={atHandLimit ? `Hand limit reached (max ${maxHandSize})` : undefined}
+            hasOtherPlayers={party.length > 0}
+            selfAtHandLimit={selfAtHandLimit}
             onDraw={() => onDraw(stack.id)}
             onShuffle={() => onShuffle(stack.id)}
             onReset={() => onReset(stack.id)}
@@ -70,8 +78,8 @@ export function StackList({
 interface StackRowProps {
   stack: Stack;
   isGM: boolean;
-  drawDisabled: boolean;
-  drawTitle: string | undefined;
+  hasOtherPlayers: boolean;
+  selfAtHandLimit: number | false;
   onDraw: () => void;
   onShuffle: () => void;
   onReset: () => void;
@@ -82,8 +90,8 @@ interface StackRowProps {
 function StackRow({
   stack,
   isGM,
-  drawDisabled,
-  drawTitle,
+  hasOtherPlayers,
+  selfAtHandLimit,
   onDraw,
   onShuffle,
   onReset,
@@ -139,9 +147,14 @@ function StackRow({
       </div>
 
       <div className="stack-row-actions">
-        <button className="btn btn-primary" onClick={onDraw} disabled={drawDisabled} title={drawTitle}>
-          Draw
-        </button>
+        <DeckCardControl
+          isGM={isGM}
+          stackEmpty={stack.drawPile.length === 0}
+          selfAtHandLimit={selfAtHandLimit}
+          hasOtherPlayers={hasOtherPlayers}
+          onDraw={onDraw}
+          onDragStartStackId={() => stack.id}
+        />
         {isGM && (
           <>
             <button className="btn btn-ghost" onClick={onShuffle} title="Shuffle the draw pile">

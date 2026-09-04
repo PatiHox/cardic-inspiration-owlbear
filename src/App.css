@@ -285,6 +285,26 @@
   min-height: 32px;
 }
 
+.deck-card-control {
+  /* Reuses .card-chip/.card-chip--back's striped background and border so
+     it reads as "a face-down card" at a glance — this literally is the
+     card being drawn or given — but smaller than a real hand card so it
+     sits level with the text buttons next to it (Shuffle/Reset/Delete). */
+  width: 28px;
+  height: 32px;
+  padding: 0;
+  cursor: pointer;
+}
+
+.deck-card-control:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.deck-card-control:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
 .new-stack-total {
   margin: 0;
   font-size: 12px;
@@ -318,6 +338,33 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.hand-row {
+  /* Every party member gets a row now, including ones holding nothing —
+     previously a player only appeared here at all once they had a card,
+     so there was no way to see who *hadn't* gotten one yet, and (for drag
+     and drop) nowhere to drop a card on an empty-handed player either. The
+     border is transparent by default and only becomes visible for
+     --drop-target, so rows with cards in them don't look boxier than
+     before. */
+  padding: 6px;
+  border-radius: 8px;
+  border: 1.5px dashed transparent;
+  transition:
+    border-color 0.1s ease,
+    background-color 0.1s ease;
+}
+
+.hand-row--drop-target {
+  border-color: var(--obr-primary, #6a4fb6);
+  background: color-mix(in srgb, var(--obr-primary, #6a4fb6) 10%, transparent);
+}
+
+.hand-empty {
+  margin: 0;
+  font-size: 12px;
+  color: var(--obr-text-secondary, #666);
 }
 
 .hand-row-header {

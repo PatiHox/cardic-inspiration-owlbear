@@ -8,6 +8,7 @@ import {
   drawCard,
   ensureDefaultStack,
   flipCard,
+  giveCard,
   handSize,
   renameStack,
   resetStack,
@@ -62,7 +63,7 @@ function themeVars(theme: Theme | null): CSSProperties {
 }
 
 export default function App() {
-  const { ready, self, theme, deckState, updateState } = useOwlbear();
+  const { ready, self, party, theme, deckState, updateState } = useOwlbear();
   const isGM = ready && self?.role === "GM";
   const [settingsOpen, setSettingsOpen] = useState(false);
 
@@ -107,6 +108,7 @@ export default function App() {
         isGM={isGM}
         maxHandSize={deckState.maxHandSize}
         myHandSize={handSize(deckState, self.id)}
+        party={party}
         onDraw={(stackId) => updateState((s) => drawCard(s, stackId, self))}
         onShuffle={(stackId) => updateState((s) => shuffleStack(s, stackId))}
         onReset={(stackId) => updateState((s) => resetStack(s, stackId))}
@@ -119,11 +121,15 @@ export default function App() {
 
       <HandsBoard
         drawnCards={deckState.drawnCards}
-        selfId={self.id}
+        self={self}
+        party={party}
+        isGM={isGM}
         maxHandSize={deckState.maxHandSize}
         faceCardScale={deckState.faceCardScale}
         onFlip={(drawnCardId) => updateState((s) => flipCard(s, drawnCardId))}
         onDiscard={(drawnCardId) => updateState((s) => discardCard(s, drawnCardId))}
+        onDraw={(stackId) => updateState((s) => drawCard(s, stackId, self))}
+        onGiveCard={(stackId, player) => updateState((s) => giveCard(s, stackId, player))}
       />
 
       <SettingsModal
