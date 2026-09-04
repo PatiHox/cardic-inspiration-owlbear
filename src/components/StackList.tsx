@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { DECK_PRESETS, DEFAULT_DECK_PRESET_ID, deckPreset } from "../deck/cards";
 import type { Stack, PlayerRef } from "../deck/state";
+import { ConfirmDialog } from "./ConfirmDialog";
 import { DeckCardControl } from "./DeckCardControl";
+import { ResetIcon, ShuffleIcon, TrashIcon } from "./icons";
 
 interface StackListProps {
   stacks: Stack[];
@@ -102,6 +104,11 @@ function StackRow({
   const [draftName, setDraftName] = useState(stack.name);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
+  function confirmDelete() {
+    setConfirmingDelete(false);
+    onDelete();
+  }
+
   function commitRename() {
     onRename(draftName);
     setEditing(false);
@@ -157,33 +164,42 @@ function StackRow({
         />
         {isGM && (
           <>
-            <button className="btn btn-ghost" onClick={onShuffle} title="Shuffle the draw pile">
-              Shuffle
+            <button
+              className="btn btn-ghost btn-icon"
+              onClick={onShuffle}
+              aria-label="Shuffle the draw pile"
+              title="Shuffle the draw pile"
+            >
+              <ShuffleIcon />
             </button>
             <button
-              className="btn btn-ghost"
+              className="btn btn-ghost btn-icon"
               onClick={onReset}
+              aria-label="Reset this deck"
               title="Return discards and outstanding hands to the draw pile, then shuffle"
             >
-              Reset
+              <ResetIcon />
             </button>
-            {confirmingDelete ? (
-              <>
-                <button className="btn btn-danger" onClick={onDelete}>
-                  Confirm delete
-                </button>
-                <button className="btn btn-ghost" onClick={() => setConfirmingDelete(false)}>
-                  Cancel
-                </button>
-              </>
-            ) : (
-              <button className="btn btn-danger" onClick={() => setConfirmingDelete(true)}>
-                Delete
-              </button>
-            )}
+            <button
+              className="btn btn-danger btn-icon"
+              onClick={() => setConfirmingDelete(true)}
+              aria-label="Delete this deck"
+              title="Delete this deck"
+            >
+              <TrashIcon />
+            </button>
           </>
         )}
       </div>
+
+      <ConfirmDialog
+        open={confirmingDelete}
+        title={`Delete "${stack.name}"?`}
+        description="This can't be undone. Any cards from this deck currently in a player's hand are removed too."
+        confirmLabel="Delete"
+        onConfirm={confirmDelete}
+        onCancel={() => setConfirmingDelete(false)}
+      />
     </li>
   );
 }

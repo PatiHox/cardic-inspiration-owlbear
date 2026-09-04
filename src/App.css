@@ -511,6 +511,60 @@
   }
 }
 
+.confirm-overlay {
+  /* Same reasoning as .modal-overlay (scoped to our own iframe), but
+     centered rather than right-docked: this is a brief interruption you
+     respond to and dismiss, not a surface worth anchoring to an edge. */
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 30;
+}
+
+.confirm-dialog {
+  width: 100%;
+  max-width: 280px;
+  /* Same --obr-glass-modal treatment as .modal-panel: a focused surface
+     someone is actively reading and about to act on. */
+  background: color-mix(in srgb, var(--obr-bg-paper, #f7f6f3) var(--obr-glass-modal, 96%), transparent);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid #c0392b;
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow:
+    0 0 0 1px rgba(192, 57, 43, 0.25),
+    0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .confirm-dialog {
+    background: var(--obr-bg-paper, #f7f6f3);
+  }
+}
+
+.confirm-dialog-title {
+  margin: 0 0 6px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.confirm-dialog-description {
+  margin: 0 0 14px;
+  font-size: 12px;
+  color: var(--obr-text-secondary, #666);
+}
+
+.confirm-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .modal-header {
   display: flex;
   align-items: flex-start;

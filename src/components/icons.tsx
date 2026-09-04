@@ -55,6 +55,41 @@ export function CrownIcon() {
   );
 }
 
+/** Two crossing arrows — the standard "shuffle" glyph. */
+export function ShuffleIcon() {
+  return (
+    <IconBase>
+      <polyline points="10.5 2.2 14 2.2 14 5.7" />
+      <line x1="2.2" y1="13.8" x2="14" y2="2.2" />
+      <polyline points="14 10.3 14 13.8 10.5 13.8" />
+      <line x1="9.5" y1="9.5" x2="14" y2="13.8" />
+      <line x1="2.2" y1="2.2" x2="6" y2="6" />
+    </IconBase>
+  );
+}
+
+/** A circular arrow — "reshuffle everything back into the draw pile." */
+export function ResetIcon() {
+  return (
+    <IconBase>
+      <path d="M13 8a5 5 0 1 1-1.6-3.7" />
+      <path d="M13 3.3V7h-3.7" />
+    </IconBase>
+  );
+}
+
+/** A trash can, for deleting a deck. */
+export function TrashIcon() {
+  return (
+    <IconBase>
+      <path d="M3 4.3h10" />
+      <path d="M6 4.3V3a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v1.3" />
+      <path d="M4.5 4.3 5 13a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1l.5-8.7" />
+      <path d="M7 6.8v4M9 6.8v4" />
+    </IconBase>
+  );
+}
+
 /** A small fanned pair of cards, used for the hand-size setting row. */
 export function HandIcon() {
   return (
