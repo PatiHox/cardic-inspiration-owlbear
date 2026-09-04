@@ -13,6 +13,7 @@ import {
   renameStack,
   resetStack,
   setFaceCardScale,
+  setGmHandVisibleToPlayers,
   setMaxHandSize,
   shuffleStack,
 } from "./deck/state";
@@ -67,6 +68,11 @@ export default function App() {
   const isGM = ready && self?.role === "GM";
   const [settingsOpen, setSettingsOpen] = useState(false);
 
+  // Old rooms saved before this setting existed have no `gmHandVisibleToPlayers`
+  // field at all — treat that the same way `maxHandSize`/`faceCardScale`
+  // already treat missing legacy fields: as the default (visible), not falsy.
+  const gmHandVisibleToPlayers = deckState.gmHandVisibleToPlayers !== false;
+
   // One-time setup: give a fresh room a standard deck to start with, so
   // players aren't staring at an empty list before the DM builds one. Only
   // the GM does this, and only until `initialized` flips true.
@@ -84,8 +90,29 @@ export default function App() {
     );
   }
 
+  // Every GM currently in the room (there can be more than one), so
+  // HandsBoard can tell a GM's row apart from a player's when applying the
+  // "DM's hand visible to players" setting.
+  const gmPlayerIds = new Set<string>([
+    ...(self.role === "GM" ? [self.id] : []),
+    ...party.filter((p) => p.role === "GM").map((p) => p.id),
+  ]);
+
+  // Click on the deck, or drop it on your own row in Hands — both funnel
+  // here. A regular player draws for themselves, respecting the hand-size
+  // cap. A GM giving a card to themselves is the same DM action as giving
+  // to anyone else: it bypasses the cap too (see giveCard in state.ts),
+  // so a capped-out GM isn't left unable to add to their own hand.
+  const drawOrGiveToSelf = (stackId: string) =>
+    updateState((s) => (isGM ? giveCard : drawCard)(s, stackId, self));
+
   return (
-    <div className="app" style={themeVars(theme)}>
+    // `id="app-root"`: ConfirmDialog portals its overlay here (not
+    // document.body) so it still sits inside the DOM subtree carrying the
+    // `--obr-*` theme vars/`colorScheme` set below, while still escaping
+    // any inner panel's own `backdrop-filter` containing block. See the
+    // comment in ConfirmDialog.tsx.
+    <div className="app" id="app-root" style={themeVars(theme)}>
       <header className="app-header">
         <img src={`${import.meta.env.BASE_URL}icon.svg`} alt="" className="app-icon" />
         <div>
@@ -108,8 +135,7 @@ export default function App() {
         isGM={isGM}
         maxHandSize={deckState.maxHandSize}
         myHandSize={handSize(deckState, self.id)}
-        party={party}
-        onDraw={(stackId) => updateState((s) => drawCard(s, stackId, self))}
+        onDraw={drawOrGiveToSelf}
         onShuffle={(stackId) => updateState((s) => shuffleStack(s, stackId))}
         onReset={(stackId) => updateState((s) => resetStack(s, stackId))}
         onRename={(stackId, name) => updateState((s) => renameStack(s, stackId, name))}
@@ -126,9 +152,11 @@ export default function App() {
         isGM={isGM}
         maxHandSize={deckState.maxHandSize}
         faceCardScale={deckState.faceCardScale}
+        gmPlayerIds={gmPlayerIds}
+        gmHandVisibleToPlayers={gmHandVisibleToPlayers}
         onFlip={(drawnCardId) => updateState((s) => flipCard(s, drawnCardId))}
         onDiscard={(drawnCardId) => updateState((s) => discardCard(s, drawnCardId))}
-        onDraw={(stackId) => updateState((s) => drawCard(s, stackId, self))}
+        onDraw={drawOrGiveToSelf}
         onGiveCard={(stackId, player) => updateState((s) => giveCard(s, stackId, player))}
       />
 
@@ -140,6 +168,10 @@ export default function App() {
         onSetMaxHandSize={(max) => updateState((s) => setMaxHandSize(s, max))}
         faceCardScale={deckState.faceCardScale}
         onSetFaceCardScale={(scale) => updateState((s) => setFaceCardScale(s, scale))}
+        gmHandVisibleToPlayers={gmHandVisibleToPlayers}
+        onSetGmHandVisibleToPlayers={(visible) =>
+          updateState((s) => setGmHandVisibleToPlayers(s, visible))
+        }
       />
     </div>
   );

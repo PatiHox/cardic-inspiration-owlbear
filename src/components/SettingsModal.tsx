@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { FaceCardScale } from "../deck/cards";
-import { BugIcon, CrownIcon, HandIcon } from "./icons";
+import { BugIcon, CrownIcon, EyeIcon, HandIcon } from "./icons";
 import { SettingRow, Toggle } from "./SettingRow";
 
 const BUG_REPORT_URL = "https://github.com/PatiHox/cardic-inspiration-owlbear/issues/new";
@@ -13,6 +13,8 @@ interface SettingsModalProps {
   onSetMaxHandSize: (max: number | null) => void;
   faceCardScale: FaceCardScale;
   onSetFaceCardScale: (scale: FaceCardScale) => void;
+  gmHandVisibleToPlayers: boolean;
+  onSetGmHandVisibleToPlayers: (visible: boolean) => void;
 }
 
 export function SettingsModal({
@@ -23,6 +25,8 @@ export function SettingsModal({
   onSetMaxHandSize,
   faceCardScale,
   onSetFaceCardScale,
+  gmHandVisibleToPlayers,
+  onSetGmHandVisibleToPlayers,
 }: SettingsModalProps) {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -79,6 +83,11 @@ export function SettingsModal({
         <div className="setting-list">
           <HandLimitSetting isGM={isGM} maxHandSize={maxHandSize} onSetMaxHandSize={onSetMaxHandSize} />
           <FaceCardScaleSetting isGM={isGM} scale={faceCardScale} onSetScale={onSetFaceCardScale} />
+          <GmHandVisibilitySetting
+            isGM={isGM}
+            visible={gmHandVisibleToPlayers}
+            onSetVisible={onSetGmHandVisibleToPlayers}
+          />
         </div>
       </div>
     </div>
@@ -189,6 +198,32 @@ function FaceCardScaleSetting({
         onChange={(next) => onSetScale(next ? "ordinal" : "cap10")}
         label="Use J/Q/K's ordinal value instead of a flat +10"
       />
+    </SettingRow>
+  );
+}
+
+function GmHandVisibilitySetting({
+  isGM,
+  visible,
+  onSetVisible,
+}: {
+  isGM: boolean;
+  visible: boolean;
+  onSetVisible: (visible: boolean) => void;
+}) {
+  const description = "Let players see the cards in the DM's own hand, if the DM is holding any.";
+
+  if (!isGM) {
+    return (
+      <SettingRow icon={<EyeIcon />} title="DM's hand visible to players" description={description}>
+        <span className="setting-readout">{visible ? "Visible" : "Hidden"}</span>
+      </SettingRow>
+    );
+  }
+
+  return (
+    <SettingRow icon={<EyeIcon />} title="DM's hand visible to players" description={description}>
+      <Toggle checked={visible} onChange={onSetVisible} label="Show the DM's hand to players" />
     </SettingRow>
   );
 }

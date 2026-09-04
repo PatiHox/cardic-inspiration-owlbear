@@ -43,6 +43,14 @@ export interface DeckState {
   maxHandSize: number | null;
   /** How face-card (J/Q/K) bonuses are scaled — see FaceCardScale in cards.ts. */
   faceCardScale: FaceCardScale;
+  /**
+   * Can players see the cards in a GM's own hand? Default true, matching
+   * prior behavior (no such filtering existed) so rooms saved before this
+   * setting was added are unaffected. Consumers should treat a missing/old
+   * value as visible too (`!== false`, not truthiness), the same defensive
+   * pattern `faceCardScale`/`maxHandSize` already rely on for old room data.
+   */
+  gmHandVisibleToPlayers: boolean;
 }
 
 export const EMPTY_STATE: DeckState = {
@@ -52,6 +60,7 @@ export const EMPTY_STATE: DeckState = {
   initialized: false,
   maxHandSize: null,
   faceCardScale: DEFAULT_FACE_CARD_SCALE,
+  gmHandVisibleToPlayers: true,
 };
 
 /** Namespaced room-metadata key, per OBR's recommended reverse-DNS convention. */
@@ -173,6 +182,11 @@ export function setMaxHandSize(state: DeckState, max: number | null): DeckState 
 /** DM setting: how face-card (J/Q/K) bonuses are scaled for every deck in this room. */
 export function setFaceCardScale(state: DeckState, scale: FaceCardScale): DeckState {
   return { ...state, faceCardScale: scale };
+}
+
+/** DM setting: whether players can see the cards in a GM's own hand. */
+export function setGmHandVisibleToPlayers(state: DeckState, visible: boolean): DeckState {
+  return { ...state, gmHandVisibleToPlayers: visible };
 }
 
 /** Move the top card of a stack's draw pile into `player`'s hand, unconditionally. */

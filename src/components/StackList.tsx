@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { DECK_PRESETS, DEFAULT_DECK_PRESET_ID, deckPreset } from "../deck/cards";
-import type { Stack, PlayerRef } from "../deck/state";
+import type { Stack } from "../deck/state";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { DeckCardControl } from "./DeckCardControl";
 import { ResetIcon, ShuffleIcon, TrashIcon } from "./icons";
@@ -12,8 +12,6 @@ interface StackListProps {
   maxHandSize: number | null;
   /** How many cards the current viewer is holding right now, across all decks. */
   myHandSize: number;
-  /** Other players in the room, for the DM's drag-to-give control. */
-  party: PlayerRef[];
   /** Click a deck's card: draw it into the clicking player's own hand. */
   onDraw: (stackId: string) => void;
   onShuffle: (stackId: string) => void;
@@ -28,7 +26,6 @@ export function StackList({
   isGM,
   maxHandSize,
   myHandSize,
-  party,
   onDraw,
   onShuffle,
   onReset,
@@ -61,7 +58,6 @@ export function StackList({
             key={stack.id}
             stack={stack}
             isGM={isGM}
-            hasOtherPlayers={party.length > 0}
             selfAtHandLimit={selfAtHandLimit}
             onDraw={() => onDraw(stack.id)}
             onShuffle={() => onShuffle(stack.id)}
@@ -80,7 +76,6 @@ export function StackList({
 interface StackRowProps {
   stack: Stack;
   isGM: boolean;
-  hasOtherPlayers: boolean;
   selfAtHandLimit: number | false;
   onDraw: () => void;
   onShuffle: () => void;
@@ -92,7 +87,6 @@ interface StackRowProps {
 function StackRow({
   stack,
   isGM,
-  hasOtherPlayers,
   selfAtHandLimit,
   onDraw,
   onShuffle,
@@ -158,14 +152,13 @@ function StackRow({
           isGM={isGM}
           stackEmpty={stack.drawPile.length === 0}
           selfAtHandLimit={selfAtHandLimit}
-          hasOtherPlayers={hasOtherPlayers}
           onDraw={onDraw}
           onDragStartStackId={() => stack.id}
         />
         {isGM && (
-          <>
+          <div className="stack-row-secondary-actions">
             <button
-              className="btn btn-ghost btn-icon"
+              className="btn btn-ghost btn-icon btn-icon-sm"
               onClick={onShuffle}
               aria-label="Shuffle the draw pile"
               title="Shuffle the draw pile"
@@ -173,7 +166,7 @@ function StackRow({
               <ShuffleIcon />
             </button>
             <button
-              className="btn btn-ghost btn-icon"
+              className="btn btn-ghost btn-icon btn-icon-sm"
               onClick={onReset}
               aria-label="Reset this deck"
               title="Return discards and outstanding hands to the draw pile, then shuffle"
@@ -181,14 +174,14 @@ function StackRow({
               <ResetIcon />
             </button>
             <button
-              className="btn btn-danger btn-icon"
+              className="btn btn-danger btn-icon btn-icon-sm"
               onClick={() => setConfirmingDelete(true)}
               aria-label="Delete this deck"
               title="Delete this deck"
             >
               <TrashIcon />
             </button>
-          </>
+          </div>
         )}
       </div>
 

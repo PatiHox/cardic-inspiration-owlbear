@@ -11,14 +11,15 @@ interface DeckCardControlProps {
   /** The stack's draw pile is empty — nothing to click or drag either way. */
   stackEmpty: boolean;
   /** The viewer's own hand is at the room's hand-size cap, carrying the
-   * limit itself for the tooltip; `false` when not capped. Blocks drawing
-   * for yourself, whether by click or by dragging onto your own row —
-   * those are the same action via two gestures. Doesn't block a GM from
-   * dragging onto a *different* player, since giving bypasses the cap. */
+   * limit itself for the tooltip; `false` when not capped. Blocks a regular
+   * player from drawing for themselves, whether by click or by dragging
+   * onto their own row. Never blocks a GM: giving a card to anyone —
+   * including themselves — is a DM action that bypasses the cap, the same
+   * way giving to a different player already does. */
   selfAtHandLimit: number | false;
-  /** Any other players in the room a GM could give a card to via drag. */
-  hasOtherPlayers: boolean;
-  /** Click, or drag onto your own row: draw the top card into your own hand. */
+  /** Click, or drag onto your own row: draw the top card into your own hand
+   * (a GM's own click/self-drop bypasses the cap; onDraw is wired to route
+   * accordingly). */
   onDraw: () => void;
   /** Drag start: supplies the stack id for the drop handler. Anyone can
    * start a drag — where it's allowed to land is decided by the drop
@@ -43,27 +44,27 @@ export function DeckCardControl({
   isGM,
   stackEmpty,
   selfAtHandLimit,
-  hasOtherPlayers,
   onDraw,
   onDragStartStackId,
 }: DeckCardControlProps) {
-  const canClick = !stackEmpty && !selfAtHandLimit;
-  // Dragging is at least as capable as clicking (dropping on your own row
-  // does the same thing) and, for a GM, more so (dropping on someone
-  // else's row gives them the card even if the GM's own hand is full).
-  const canDrag = !stackEmpty && (canClick || (isGM && hasOtherPlayers));
+  // The hand-size cap only ever constrains a regular player's own hand — a
+  // GM giving a card to anyone, themselves included, is a DM action that
+  // bypasses it (see giveCard in state.ts).
+  const capped = !isGM && selfAtHandLimit;
+  const canClick = !stackEmpty && !capped;
+  // Dragging is at least as capable as clicking: dropping on your own row
+  // does the same thing, and a GM can additionally drop onto someone
+  // else's row to give them the card.
+  const canDrag = !stackEmpty && (isGM || canClick);
   const inert = !canClick && !canDrag;
 
   let title: string;
   if (stackEmpty) {
     title = "Deck is empty";
+  } else if (isGM) {
+    title = "Click to draw a card, or drag onto a player in Hands to give them one";
   } else if (inert) {
     title = `Hand limit reached (max ${selfAtHandLimit})`;
-  } else if (isGM) {
-    title =
-      canClick && canDrag
-        ? "Click to draw a card, or drag onto a player in Hands to give them one"
-        : "Your hand is full — drag onto a player in Hands to give them a card";
   } else {
     title = "Click, or drag onto your own hand, to draw a card";
   }

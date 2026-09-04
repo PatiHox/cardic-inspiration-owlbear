@@ -90,6 +90,16 @@ export function TrashIcon() {
   );
 }
 
+/** An eye, for the GM-hand-visibility setting row. */
+export function EyeIcon() {
+  return (
+    <IconBase>
+      <path d="M1.3 8S3.8 3.2 8 3.2 14.7 8 14.7 8 12.2 12.8 8 12.8 1.3 8 1.3 8Z" />
+      <circle cx="8" cy="8" r="2" />
+    </IconBase>
+  );
+}
+
 /** A small fanned pair of cards, used for the hand-size setting row. */
 export function HandIcon() {
   return (

@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -50,7 +51,25 @@ export function ConfirmDialog({
 
   if (!open) return null;
 
-  return (
+  // Portaled out from wherever it's nested (some `.panel` row), not
+  // rendered in place: `.panel` sets its own `backdrop-filter` for the
+  // glass look, and per spec that makes it a containing block for
+  // `position: fixed` descendants — so rendered in place, this overlay's
+  // "fixed, cover the viewport" would actually only cover that one panel.
+  //
+  // Targets `#app-root` (the top-level `.app` div — see App.tsx) rather
+  // than `document.body`: `.app` fills the whole viewport itself, so it's
+  // just as good a home for a full-extension overlay, and — unlike
+  // `document.body` — it's where App.tsx puts the `--obr-*` theme
+  // variables and `colorScheme` as inline styles. Those only cascade to
+  // this dialog if it's still inside `.app`'s DOM subtree; portaling all
+  // the way to `document.body` escaped them too and left the dialog stuck
+  // on its hardcoded light-mode fallback colors regardless of the real
+  // theme. Falls back to `document.body` only if `#app-root` isn't there
+  // (shouldn't happen — kept purely defensive).
+  const portalTarget = document.getElementById("app-root") ?? document.body;
+
+  return createPortal(
     <div className="confirm-overlay" onClick={onCancel}>
       <div
         className="confirm-dialog"
@@ -75,6 +94,7 @@ export function ConfirmDialog({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    portalTarget,
   );
 }

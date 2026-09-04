@@ -234,6 +234,24 @@
   font-size: 15px;
 }
 
+.btn-icon-sm {
+  /* Shuffle/Reset/Delete: occasional deck-management actions, not the
+     per-turn interaction (the deck card itself) — sized down and pushed to
+     the row's far edge (see .stack-row-secondary-actions) so they read as
+     clearly secondary instead of matching weight with the primary card.
+     24px is the WCAG 2.2 AA touch-target floor, not below it — smaller
+     than .btn-icon's 32px on purpose, not shrunk further than that floor. */
+  width: 24px;
+  min-height: 24px;
+}
+
+.stack-row-secondary-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
 .text-input {
   border: 1px solid var(--obr-border, rgba(0, 0, 0, 0.2));
   border-radius: 6px;
@@ -354,6 +372,17 @@
   transition:
     border-color 0.1s ease,
     background-color 0.1s ease;
+  /* Reported: releasing a drag directly over the player's name didn't
+     register the drop. That name is plain text, selectable by default —
+     releasing the mouse button over selectable text mid-drag can make the
+     browser resolve the mouseup as finishing a text selection instead of
+     completing the drop, which drag-and-drop code never sees at all (it's
+     handled before any drop/dragend event fires). None of this row's text
+     is meant to be copy-pasted anyway, so there's no downside to turning
+     selection off across the whole row rather than guessing which
+     specific element the pointer happened to be over. */
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .hand-row--drop-target {

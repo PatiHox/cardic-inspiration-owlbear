@@ -14,10 +14,18 @@ interface HandsBoardProps {
   isGM: boolean;
   maxHandSize: number | null;
   faceCardScale: FaceCardScale;
+  /** Ids of every GM currently in the room, so their row(s) can be filtered
+   * out for a player viewer when `gmHandVisibleToPlayers` is off. */
+  gmPlayerIds: Set<string>;
+  /** DM setting: can players see a GM's hand? Ignored for a GM viewer, who
+   * always sees every hand regardless. */
+  gmHandVisibleToPlayers: boolean;
   onFlip: (drawnCardId: string) => void;
   onDiscard: (drawnCardId: string) => void;
   /** Dropping a deck's card onto your own row: draw it into your own hand,
-   * same as clicking it (respects the hand-size cap). */
+   * same as clicking it. Respects the hand-size cap for a regular player;
+   * a GM bypasses it for themselves too, same as when giving to someone
+   * else. */
   onDraw: (stackId: string) => void;
   /** DM only: dropping a deck's card onto a *different* player's row gives
    * it to them directly, bypassing the cap. */
@@ -58,12 +66,18 @@ export function HandsBoard({
   isGM,
   maxHandSize,
   faceCardScale,
+  gmPlayerIds,
+  gmHandVisibleToPlayers,
   onFlip,
   onDiscard,
   onDraw,
   onGiveCard,
 }: HandsBoardProps) {
-  const hands = buildRoster(self, party, drawnCards);
+  // A GM viewer always sees every hand; a player viewer only sees a GM's
+  // hand when the DM has left it visible.
+  const hands = buildRoster(self, party, drawnCards).filter(
+    (hand) => isGM || gmHandVisibleToPlayers || !gmPlayerIds.has(hand.player.id),
+  );
 
   return (
     <section className="panel" aria-labelledby="hands-heading">
