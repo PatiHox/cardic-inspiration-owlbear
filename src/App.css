@@ -131,15 +131,61 @@
 }
 
 .stack-row-main {
+  /* Two groups pinned to opposite edges — the name/tag on the left, and
+     counts + (for a GM) the title-bar buttons together on the right — so
+     the buttons stay pushed to the far edge regardless of whether they're
+     present, and a player view (no buttons) doesn't leave that edge empty.
+     Deliberately not flex-wrap: with it, a long name that no longer shares
+     the line with the right group flips that group's own justification
+     onto its own line — space-between with one item per line left-aligns
+     whichever group ends up alone, so the buttons visibly jumped left the
+     moment a name was long enough to wrap. Never wrapping means the right
+     group's position can't depend on the name's length at all; the name
+     truncates instead (see .stack-name / .stack-row-title below). */
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 8px;
-  flex-wrap: wrap;
+}
+
+.stack-row-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  /* Lets the name truncate instead of forcing the row to wrap — a flex
+     item's default min-width is auto (its content size), which would
+     otherwise refuse to shrink below the full name's width at all. */
+  min-width: 0;
+}
+
+.stack-row-title .text-input {
+  /* The rename input is a flex child here too, and inputs carry their own
+     intrinsic default width — without overriding min-width it refused to
+     shrink below that and overlapped the counts/buttons to its right
+     instead. flex-basis: 0 (not just min-width: 0) so it takes only its
+     fair share of the remaining space up front, rather than briefly
+     claiming its intrinsic width before shrinking back. */
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.stack-row-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  /* Fixed-position anchor for the row: always its full natural width,
+     never the side that gives up space to a long name. */
+  flex-shrink: 0;
 }
 
 .stack-name {
   font-weight: 600;
+  /* The side that actually concedes space to keep the header-right group's
+     position constant regardless of name length. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }
 
 .stack-name--editable {
@@ -164,6 +210,9 @@
   border-radius: 999px;
   background: var(--obr-primary, #6a4fb6);
   color: var(--obr-primary-contrast, #fff);
+  /* Small fixed-content badge — the name truncates before this ever has
+     to give up space. */
+  flex-shrink: 0;
 }
 
 .stack-counts {
@@ -173,8 +222,6 @@
 
 .stack-row-actions {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
 }
 
 .btn {
@@ -212,6 +259,17 @@
 }
 
 .btn-danger {
+  /* Neutral at rest, like its Shuffle/Reset siblings — a permanently red
+     border made Delete look like a standing alert next to two calm icons
+     of the same size, when the actual "are you sure" signal already comes
+     from the confirm dialog on click. Red only surfaces on hover/focus,
+     i.e. right when it's actually about to matter. */
+  border-color: var(--obr-border, rgba(0, 0, 0, 0.15));
+  color: var(--obr-text, #1a1a1a);
+}
+
+.btn-danger:hover:not(:disabled),
+.btn-danger:focus-visible {
   border-color: #c0392b;
   color: #c0392b;
 }
@@ -234,22 +292,48 @@
   font-size: 15px;
 }
 
-.btn-icon-sm {
-  /* Shuffle/Reset/Delete: occasional deck-management actions, not the
-     per-turn interaction (the deck card itself) — sized down and pushed to
-     the row's far edge (see .stack-row-secondary-actions) so they read as
-     clearly secondary instead of matching weight with the primary card.
-     24px is the WCAG 2.2 AA touch-target floor, not below it — smaller
-     than .btn-icon's 32px on purpose, not shrunk further than that floor. */
-  width: 24px;
-  min-height: 24px;
-}
-
-.stack-row-secondary-actions {
+.stack-row-titlebar-actions {
+  /* Tight cluster, like a real title bar's control group — see
+     .btn-titlebar below. */
   display: flex;
   align-items: center;
-  gap: 4px;
-  margin-left: auto;
+  gap: 2px;
+}
+
+.btn-titlebar {
+  /* Shuffle/Reset/Delete, docked in the deck row's own header — window
+     title-bar chrome, not a floating toolbar next to the deck card. No
+     border/background at rest (unlike .btn): a title bar's buttons are
+     just glyphs until you're about to touch one, and three individually
+     bordered chips here would fight the "this is one control cluster,
+     part of the row's frame" read that sitting flush in the header gives
+     them for free.
+     24px meets the WCAG 2.2 AA touch-target floor, not below it. */
+  width: 24px;
+  min-height: 24px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--obr-text-secondary, #666);
+  cursor: pointer;
+}
+
+.btn-titlebar:hover:not(:disabled),
+.btn-titlebar:focus-visible {
+  background: var(--obr-border, rgba(0, 0, 0, 0.12));
+  color: var(--obr-text, #1a1a1a);
+}
+
+.btn-titlebar-danger:hover:not(:disabled),
+.btn-titlebar-danger:focus-visible {
+  /* The literal Windows close-button hover: solid red fill, not just a
+     red icon — the one button in the cluster that should read as final. */
+  background: #c0392b;
+  color: #ffffff;
 }
 
 .text-input {

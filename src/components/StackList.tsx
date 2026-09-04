@@ -96,7 +96,13 @@ function StackRow({
 }: StackRowProps) {
   const [editing, setEditing] = useState(false);
   const [draftName, setDraftName] = useState(stack.name);
+  const [confirmingReset, setConfirmingReset] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+
+  function confirmReset() {
+    setConfirmingReset(false);
+    onReset();
+  }
 
   function confirmDelete() {
     setConfirmingDelete(false);
@@ -111,40 +117,82 @@ function StackRow({
   return (
     <li className="stack-row">
       <div className="stack-row-main">
-        {editing ? (
-          <input
-            className="text-input"
-            aria-label="Deck name"
-            autoFocus
-            value={draftName}
-            onChange={(e) => setDraftName(e.target.value)}
-            onBlur={commitRename}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") commitRename();
-              if (e.key === "Escape") {
-                setDraftName(stack.name);
-                setEditing(false);
-              }
-            }}
-          />
-        ) : isGM ? (
-          <button
-            type="button"
-            className="stack-name stack-name--editable"
-            onClick={() => setEditing(true)}
-            title="Click to rename"
-          >
-            {stack.name}
-          </button>
-        ) : (
-          <span className="stack-name">{stack.name}</span>
-        )}
-        {deckPreset(stack.deckSizeId).tag && (
-          <span className="stack-tag">{deckPreset(stack.deckSizeId).tag}</span>
-        )}
-        <span className="stack-counts">
-          {stack.drawPile.length} left · {stack.discardPile.length} discarded
-        </span>
+        <div className="stack-row-title">
+          {editing ? (
+            <input
+              className="text-input"
+              aria-label="Deck name"
+              autoFocus
+              value={draftName}
+              onChange={(e) => setDraftName(e.target.value)}
+              onBlur={commitRename}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") commitRename();
+                if (e.key === "Escape") {
+                  setDraftName(stack.name);
+                  setEditing(false);
+                }
+              }}
+            />
+          ) : isGM ? (
+            <button
+              type="button"
+              className="stack-name stack-name--editable"
+              onClick={() => setEditing(true)}
+              title="Click to rename"
+            >
+              {stack.name}
+            </button>
+          ) : (
+            // No rename button to reveal the full name on click for a
+            // player, so if it's long enough to truncate, a hover tooltip
+            // is the only way to read the rest of it.
+            <span className="stack-name" title={stack.name}>
+              {stack.name}
+            </span>
+          )}
+          {deckPreset(stack.deckSizeId).tag && (
+            <span className="stack-tag">{deckPreset(stack.deckSizeId).tag}</span>
+          )}
+        </div>
+
+        <div className="stack-row-header-right">
+          <span className="stack-counts">
+            {stack.drawPile.length} left · {stack.discardPile.length} discarded
+          </span>
+          {/* Management controls docked to the row's own header, like a
+              window's title-bar buttons, rather than floating in the
+              content area next to the deck card — gives them a fixed home
+              tied to "this deck" instead of orphaned space beside the card. */}
+          {isGM && (
+            <div className="stack-row-titlebar-actions">
+              <button
+                className="btn-titlebar"
+                onClick={onShuffle}
+                aria-label="Shuffle the draw pile"
+                title="Shuffle the draw pile"
+              >
+                <ShuffleIcon />
+              </button>
+              <button
+                className="btn-titlebar"
+                onClick={() => setConfirmingReset(true)}
+                aria-label="Reset this deck"
+                title="Return discards and outstanding hands to the draw pile, then shuffle"
+              >
+                <ResetIcon />
+              </button>
+              <button
+                className="btn-titlebar btn-titlebar-danger"
+                onClick={() => setConfirmingDelete(true)}
+                aria-label="Delete this deck"
+                title="Delete this deck"
+              >
+                <TrashIcon />
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="stack-row-actions">
@@ -155,35 +203,16 @@ function StackRow({
           onDraw={onDraw}
           onDragStartStackId={() => stack.id}
         />
-        {isGM && (
-          <div className="stack-row-secondary-actions">
-            <button
-              className="btn btn-ghost btn-icon btn-icon-sm"
-              onClick={onShuffle}
-              aria-label="Shuffle the draw pile"
-              title="Shuffle the draw pile"
-            >
-              <ShuffleIcon />
-            </button>
-            <button
-              className="btn btn-ghost btn-icon btn-icon-sm"
-              onClick={onReset}
-              aria-label="Reset this deck"
-              title="Return discards and outstanding hands to the draw pile, then shuffle"
-            >
-              <ResetIcon />
-            </button>
-            <button
-              className="btn btn-danger btn-icon btn-icon-sm"
-              onClick={() => setConfirmingDelete(true)}
-              aria-label="Delete this deck"
-              title="Delete this deck"
-            >
-              <TrashIcon />
-            </button>
-          </div>
-        )}
       </div>
+
+      <ConfirmDialog
+        open={confirmingReset}
+        title={`Reset "${stack.name}"?`}
+        description="Every discarded card, and any cards players are currently holding from this deck, are pulled back and reshuffled into the draw pile. Held cards are removed from players' hands."
+        confirmLabel="Reset"
+        onConfirm={confirmReset}
+        onCancel={() => setConfirmingReset(false)}
+      />
 
       <ConfirmDialog
         open={confirmingDelete}
