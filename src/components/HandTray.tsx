@@ -578,7 +578,7 @@ interface OwnHandTrayProps {
   flush: () => void;
   onFlip: (drawnCardId: string) => void;
   onDiscard: (drawnCardId: string) => void;
-  /** A revealed card is being dragged toward (or away from) its discard pile. */
+  /** A card is being dragged toward (or away from) its discard pile. */
   onPlayDragChange: (drag: PlayDrag | null) => void;
 }
 
@@ -822,12 +822,10 @@ export function OwnHandTray({
         const cx = g.startCenter.x + (client.x - g.start.x);
         const cy = g.startCenter.y + (client.y - g.start.y);
         setPose(g.cardId, clampPose({ ...g.startPose, x: cx / tray.w, y: cy / tray.h }));
-        if (r.card.revealed) {
-          // A revealed card can be carried out of the tray, to its
-          // deck's discard pile. Face-down cards stay on the tray:
-          // there's nowhere else for them to go.
-          carry.track(r.card, client, !insideTray(client));
-        }
+        // Any card can be carried out of the tray to its deck's discard
+        // pile: a revealed one to play it, a face-down one to discard it
+        // unseen (its ghost shows the back, and it's never flipped).
+        carry.track(r.card, client, !insideTray(client));
         return;
       }
       case "stretch": {
@@ -985,10 +983,9 @@ export function OwnHandTray({
         break;
       case "Delete":
       case "Backspace":
-        if (card.revealed) {
-          setSelectedId(null);
-          onDiscard(card.id);
-        }
+        // Plays a revealed card, discards a face-down one unseen.
+        setSelectedId(null);
+        onDiscard(card.id);
         break;
       case "Escape":
         setSelectedId(null);
@@ -1054,9 +1051,10 @@ export function OwnHandTray({
     >
       <p id={hintId} className="sr-only">
         Your cards. Press Enter to lift a card, and Enter again to flip a lifted face-down card. Arrow keys move
-        it, square brackets rotate it, plus and minus resize it, Delete plays a revealed card, Escape puts it
-        down. With a pointer: drag to move, use the frame handles to stretch and rotate, drop a revealed card on
-        its deck's discard pile to play it, and long-press or right-click for a menu.
+        it, square brackets rotate it, plus and minus resize it, Delete plays a revealed card or discards a
+        face-down one without flipping it, Escape puts it down. With a pointer: drag to move, use the frame
+        handles to stretch and rotate, drop a card on its deck's discard pile to play or discard it, and
+        long-press or right-click for a menu.
       </p>
       <div ref={trayRef} className="hand-tray" aria-label="Your cards">
         {resolved.map((r) => (
@@ -1128,9 +1126,14 @@ export function OwnHandTray({
             y={menu.y}
             onClose={() => setMenu(null)}
             items={[
-              menuCard.card.revealed
-                ? { label: "Play", onSelect: () => runMenu("play") }
-                : { label: "Flip", onSelect: () => runMenu("flip") },
+              ...(menuCard.card.revealed
+                ? [{ label: "Play", onSelect: () => runMenu("play") }]
+                : [
+                    { label: "Flip", onSelect: () => runMenu("flip") },
+                    // Give the card up unseen — it goes to the discard
+                    // pile face-down, never revealed to anyone.
+                    { label: "Discard without flipping", onSelect: () => runMenu("play") },
+                  ]),
               { label: "Bring to front", onSelect: () => runMenu("front") },
               { label: "Reset shape", onSelect: () => runMenu("reset"), disabled: !menuCard.posed },
             ]}

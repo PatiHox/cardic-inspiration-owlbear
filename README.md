@@ -60,11 +60,15 @@ the cards. Everything works the same with a mouse, a finger or a pen:
   and its value is visible to the whole table from then on.
 - **Play** a revealed card by dragging it out of your tray and dropping it
   on its deck's discard pile, which lights up as you approach.
-- **Long-press or right-click** a card for a menu with Flip / Play, Bring
-  to front and Reset shape.
+- **Discard without flipping**: a face-down card can be dragged to the
+  discard pile the same way. It goes back unseen — nobody, you included,
+  ever learns what it was.
+- **Long-press or right-click** a card for a menu with Flip / Discard
+  without flipping (face-down) or Play (revealed), Bring to front and
+  Reset shape.
 - **Keyboard**: Tab to a card (that lifts it), Enter flips a face-down one,
   arrow keys move it, `[` and `]` rotate, `+`/`-` resize, Delete plays a
-  revealed one, Escape puts it down.
+  revealed one or discards a face-down one unseen, Escape puts it down.
 
 Everyone sees your cards where and how you've placed them, mirrored
 smaller under your name in their view, and they see them move as you drag
