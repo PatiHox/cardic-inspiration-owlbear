@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { FaceCardScale } from "../deck/cards";
-import { BugIcon, CrownIcon, EyeIcon, HandIcon } from "./icons";
+import { BugIcon, CrownIcon, EyeIcon, HandIcon, SignalOffIcon } from "./icons";
 import { SettingRow, Toggle } from "./SettingRow";
 
 const BUG_REPORT_URL = "https://github.com/PatiHox/cardic-inspiration-owlbear/issues/new";
@@ -15,6 +15,10 @@ interface SettingsModalProps {
   onSetFaceCardScale: (scale: FaceCardScale) => void;
   gmHandVisibleToPlayers: boolean;
   onSetGmHandVisibleToPlayers: (visible: boolean) => void;
+  disconnectedHandsVisibleToGM: boolean;
+  onSetDisconnectedHandsVisibleToGM: (visible: boolean) => void;
+  disconnectedHandsVisibleToPlayers: boolean;
+  onSetDisconnectedHandsVisibleToPlayers: (visible: boolean) => void;
 }
 
 export function SettingsModal({
@@ -27,6 +31,10 @@ export function SettingsModal({
   onSetFaceCardScale,
   gmHandVisibleToPlayers,
   onSetGmHandVisibleToPlayers,
+  disconnectedHandsVisibleToGM,
+  onSetDisconnectedHandsVisibleToGM,
+  disconnectedHandsVisibleToPlayers,
+  onSetDisconnectedHandsVisibleToPlayers,
 }: SettingsModalProps) {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -87,6 +95,13 @@ export function SettingsModal({
             isGM={isGM}
             visible={gmHandVisibleToPlayers}
             onSetVisible={onSetGmHandVisibleToPlayers}
+          />
+          <DisconnectedHandsVisibilitySetting
+            isGM={isGM}
+            visibleToGM={disconnectedHandsVisibleToGM}
+            onSetVisibleToGM={onSetDisconnectedHandsVisibleToGM}
+            visibleToPlayers={disconnectedHandsVisibleToPlayers}
+            onSetVisibleToPlayers={onSetDisconnectedHandsVisibleToPlayers}
           />
         </div>
       </div>
@@ -198,6 +213,53 @@ function FaceCardScaleSetting({
         onChange={(next) => onSetScale(next ? "ordinal" : "cap10")}
         label="Use J/Q/K's ordinal value instead of a flat +10"
       />
+    </SettingRow>
+  );
+}
+
+function DisconnectedHandsVisibilitySetting({
+  isGM,
+  visibleToGM,
+  onSetVisibleToGM,
+  visibleToPlayers,
+  onSetVisibleToPlayers,
+}: {
+  isGM: boolean;
+  visibleToGM: boolean;
+  onSetVisibleToGM: (visible: boolean) => void;
+  visibleToPlayers: boolean;
+  onSetVisibleToPlayers: (visible: boolean) => void;
+}) {
+  const description = "Show the hand of a player who's left the room, if they're still holding cards.";
+
+  if (!isGM) {
+    return (
+      <SettingRow icon={<SignalOffIcon />} title="Disconnected players' hands" description={description}>
+        <span className="setting-readout">{visibleToPlayers ? "Visible" : "Hidden"}</span>
+      </SettingRow>
+    );
+  }
+
+  return (
+    <SettingRow icon={<SignalOffIcon />} title="Disconnected players' hands" description={description}>
+      <div className="setting-control-group">
+        <label className="setting-control-label">
+          <span>To me</span>
+          <Toggle
+            checked={visibleToGM}
+            onChange={onSetVisibleToGM}
+            label="Show disconnected players' hands to me"
+          />
+        </label>
+        <label className="setting-control-label">
+          <span>To players</span>
+          <Toggle
+            checked={visibleToPlayers}
+            onChange={onSetVisibleToPlayers}
+            label="Show disconnected players' hands to other players"
+          />
+        </label>
+      </div>
     </SettingRow>
   );
 }

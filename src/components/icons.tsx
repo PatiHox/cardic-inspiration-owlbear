@@ -100,6 +100,19 @@ export function EyeIcon() {
   );
 }
 
+/** A signal with a slash through it, for the disconnected-hand-visibility
+ * setting rows. */
+export function SignalOffIcon() {
+  return (
+    <IconBase>
+      <path d="M4.8 9.7a4.6 4.6 0 0 1 2.2-1.2M9.8 8.9a4.6 4.6 0 0 1 1.4.9" />
+      <path d="M2.8 7a7.7 7.7 0 0 1 3-1.8M12.1 5.6a7.7 7.7 0 0 1 1.1.7" />
+      <circle cx="8" cy="12.4" r="1" fill="currentColor" stroke="none" />
+      <line x1="2.5" y1="2.5" x2="13.5" y2="13.5" />
+    </IconBase>
+  );
+}
+
 /** A small fanned pair of cards, used for the hand-size setting row. */
 export function HandIcon() {
   return (

@@ -20,6 +20,13 @@ interface HandsBoardProps {
   /** DM setting: can players see a GM's hand? Ignored for a GM viewer, who
    * always sees every hand regardless. */
   gmHandVisibleToPlayers: boolean;
+  /** DM setting: can the DM see the hand of a player no longer in `party`,
+   * if that player is still holding cards? Ignored for a player viewer. */
+  disconnectedHandsVisibleToGM: boolean;
+  /** DM setting: can other players see the hand of a disconnected player?
+   * Ignored for a GM viewer, gated separately by
+   * `disconnectedHandsVisibleToGM` above. */
+  disconnectedHandsVisibleToPlayers: boolean;
   onFlip: (drawnCardId: string) => void;
   onDiscard: (drawnCardId: string) => void;
   /** Dropping a deck's card onto your own row: draw it into your own hand,
@@ -35,27 +42,36 @@ interface HandsBoardProps {
 interface Hand {
   player: PlayerRef;
   cards: DrawnCard[];
+  /** True if this player is no longer in `party` (or `self`) — they've left
+   * or disconnected from the room but are still holding cards. */
+  disconnected: boolean;
 }
 
 function buildRoster(self: PlayerRef, party: PlayerRef[], drawnCards: DrawnCard[]): Hand[] {
   const roster = new Map<string, Hand>();
   for (const player of [self, ...party]) {
-    roster.set(player.id, { player, cards: [] });
+    roster.set(player.id, { player, cards: [], disconnected: false });
   }
+  const disconnectedOrder: string[] = [];
   for (const card of drawnCards) {
-    // A card can belong to someone no longer in the roster passed in (e.g.
-    // OBR hasn't reported them via party yet) — fall back to the name/color
-    // recorded on the card itself rather than dropping it.
+    // A card can belong to someone no longer in the roster passed in —
+    // either OBR hasn't reported them via party yet, or they've actually
+    // disconnected — fall back to the name/color recorded on the card
+    // itself rather than dropping it.
     if (!roster.has(card.playerId)) {
       roster.set(card.playerId, {
         player: { id: card.playerId, name: card.playerName, color: card.playerColor },
         cards: [],
+        disconnected: true,
       });
+      disconnectedOrder.push(card.playerId);
     }
     roster.get(card.playerId)!.cards.push(card);
   }
-  // Self first, then everyone else in the order they were passed.
-  const order = [self.id, ...party.map((p) => p.id)];
+  // Self and the current party first, in the order they were passed, then
+  // anyone holding cards who's no longer connected, in the order their
+  // first card was found.
+  const order = [self.id, ...party.map((p) => p.id), ...disconnectedOrder];
   return order.filter((id) => roster.has(id)).map((id) => roster.get(id)!);
 }
 
@@ -68,16 +84,22 @@ export function HandsBoard({
   faceCardScale,
   gmPlayerIds,
   gmHandVisibleToPlayers,
+  disconnectedHandsVisibleToGM,
+  disconnectedHandsVisibleToPlayers,
   onFlip,
   onDiscard,
   onDraw,
   onGiveCard,
 }: HandsBoardProps) {
   // A GM viewer always sees every hand; a player viewer only sees a GM's
-  // hand when the DM has left it visible.
-  const hands = buildRoster(self, party, drawnCards).filter(
-    (hand) => isGM || gmHandVisibleToPlayers || !gmPlayerIds.has(hand.player.id),
-  );
+  // hand when the DM has left it visible. A disconnected player's hand is
+  // gated separately, by its own per-viewer setting.
+  const hands = buildRoster(self, party, drawnCards).filter((hand) => {
+    if (hand.disconnected) {
+      return isGM ? disconnectedHandsVisibleToGM : disconnectedHandsVisibleToPlayers;
+    }
+    return isGM || gmHandVisibleToPlayers || !gmPlayerIds.has(hand.player.id);
+  });
 
   return (
     <section className="panel" aria-labelledby="hands-heading">
@@ -184,7 +206,11 @@ function HandRow({
       <div className="hand-row-header">
         <span className="player-swatch" style={{ background: hand.player.color }} />
         <span className="player-name">
-          {isSelf ? `${hand.player.name} (you)` : hand.player.name}
+          {isSelf
+            ? `${hand.player.name} (you)`
+            : hand.disconnected
+              ? `${hand.player.name} (disconnected)`
+              : hand.player.name}
           {maxHandSize != null && ` — ${hand.cards.length}/${maxHandSize}`}
         </span>
       </div>

@@ -51,6 +51,22 @@ export interface DeckState {
    * pattern `faceCardScale`/`maxHandSize` already rely on for old room data.
    */
   gmHandVisibleToPlayers: boolean;
+  /**
+   * Can the DM see the hand of a player who's no longer connected to the
+   * room, if that player is still holding cards? Default true, same
+   * defensive-default reasoning as `gmHandVisibleToPlayers` — old rooms
+   * without this field should behave as before, not suddenly hide those
+   * hands from the DM. Consumers should treat a missing/old value as
+   * visible too (`!== false`, not truthiness).
+   */
+  disconnectedHandsVisibleToGM: boolean;
+  /**
+   * Can *other players* see the hand of a disconnected player, if the DM
+   * allows it? Independent of `disconnectedHandsVisibleToGM` — the DM can
+   * see disconnected hands themselves without exposing them to the rest of
+   * the party, or vice versa. Same defensive-default treatment as above.
+   */
+  disconnectedHandsVisibleToPlayers: boolean;
 }
 
 export const EMPTY_STATE: DeckState = {
@@ -61,6 +77,8 @@ export const EMPTY_STATE: DeckState = {
   maxHandSize: null,
   faceCardScale: DEFAULT_FACE_CARD_SCALE,
   gmHandVisibleToPlayers: true,
+  disconnectedHandsVisibleToGM: true,
+  disconnectedHandsVisibleToPlayers: true,
 };
 
 /** Namespaced room-metadata key, per OBR's recommended reverse-DNS convention. */
@@ -187,6 +205,16 @@ export function setFaceCardScale(state: DeckState, scale: FaceCardScale): DeckSt
 /** DM setting: whether players can see the cards in a GM's own hand. */
 export function setGmHandVisibleToPlayers(state: DeckState, visible: boolean): DeckState {
   return { ...state, gmHandVisibleToPlayers: visible };
+}
+
+/** DM setting: whether the DM can see the hand of a disconnected player. */
+export function setDisconnectedHandsVisibleToGM(state: DeckState, visible: boolean): DeckState {
+  return { ...state, disconnectedHandsVisibleToGM: visible };
+}
+
+/** DM setting: whether other players can see the hand of a disconnected player. */
+export function setDisconnectedHandsVisibleToPlayers(state: DeckState, visible: boolean): DeckState {
+  return { ...state, disconnectedHandsVisibleToPlayers: visible };
 }
 
 /** Move the top card of a stack's draw pile into `player`'s hand, unconditionally. */

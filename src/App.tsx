@@ -12,6 +12,8 @@ import {
   handSize,
   renameStack,
   resetStack,
+  setDisconnectedHandsVisibleToGM,
+  setDisconnectedHandsVisibleToPlayers,
   setFaceCardScale,
   setGmHandVisibleToPlayers,
   setMaxHandSize,
@@ -72,6 +74,9 @@ export default function App() {
   // field at all — treat that the same way `maxHandSize`/`faceCardScale`
   // already treat missing legacy fields: as the default (visible), not falsy.
   const gmHandVisibleToPlayers = deckState.gmHandVisibleToPlayers !== false;
+  // Same defensive default as above for the two disconnected-hand settings.
+  const disconnectedHandsVisibleToGM = deckState.disconnectedHandsVisibleToGM !== false;
+  const disconnectedHandsVisibleToPlayers = deckState.disconnectedHandsVisibleToPlayers !== false;
 
   // One-time setup: give a fresh room a standard deck to start with, so
   // players aren't staring at an empty list before the DM builds one. Only
@@ -154,6 +159,8 @@ export default function App() {
         faceCardScale={deckState.faceCardScale}
         gmPlayerIds={gmPlayerIds}
         gmHandVisibleToPlayers={gmHandVisibleToPlayers}
+        disconnectedHandsVisibleToGM={disconnectedHandsVisibleToGM}
+        disconnectedHandsVisibleToPlayers={disconnectedHandsVisibleToPlayers}
         onFlip={(drawnCardId) => updateState((s) => flipCard(s, drawnCardId))}
         onDiscard={(drawnCardId) => updateState((s) => discardCard(s, drawnCardId))}
         onDraw={drawOrGiveToSelf}
@@ -171,6 +178,14 @@ export default function App() {
         gmHandVisibleToPlayers={gmHandVisibleToPlayers}
         onSetGmHandVisibleToPlayers={(visible) =>
           updateState((s) => setGmHandVisibleToPlayers(s, visible))
+        }
+        disconnectedHandsVisibleToGM={disconnectedHandsVisibleToGM}
+        onSetDisconnectedHandsVisibleToGM={(visible) =>
+          updateState((s) => setDisconnectedHandsVisibleToGM(s, visible))
+        }
+        disconnectedHandsVisibleToPlayers={disconnectedHandsVisibleToPlayers}
+        onSetDisconnectedHandsVisibleToPlayers={(visible) =>
+          updateState((s) => setDisconnectedHandsVisibleToPlayers(s, visible))
         }
       />
     </div>
