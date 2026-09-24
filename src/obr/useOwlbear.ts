@@ -112,7 +112,13 @@ export function useOwlbear(): OwlbearContext {
       }
     });
     const unsubscribeRoom = OBR.room.onMetadataChange((metadata) => {
-      setDeckState(parseDeckState(metadata));
+      const incoming = parseDeckState(metadata);
+      // Drop echoes older than what we've already applied — see `rev` in
+      // state.ts. A missing rev on either side (old room, old client)
+      // means "can't tell", and the incoming state wins as before.
+      setDeckState((current) =>
+        incoming.rev != null && current.rev != null && incoming.rev < current.rev ? current : incoming,
+      );
       setPoses(parsePoses(metadata));
     });
 
@@ -126,7 +132,12 @@ export function useOwlbear(): OwlbearContext {
   }, [sdkReady]);
 
   const updateState = useCallback((updater: (state: DeckState) => DeckState) => {
-    const next = updater(deckStateRef.current);
+    const current = deckStateRef.current;
+    const updated = updater(current);
+    // Every state function returns its input untouched when there's
+    // nothing to do (a blocked draw, an unknown id) — no write for those.
+    if (updated === current) return;
+    const next: DeckState = { ...updated, rev: (current.rev ?? 0) + 1 };
     deckStateRef.current = next;
     setDeckState(next);
     void OBR.room.setMetadata({ [METADATA_KEY]: next });

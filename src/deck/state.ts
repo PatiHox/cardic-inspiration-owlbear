@@ -51,6 +51,18 @@ export interface DeckState {
    * pattern `faceCardScale`/`maxHandSize` already rely on for old room data.
    */
   gmHandVisibleToPlayers: boolean;
+  /**
+   * Monotonic write counter, bumped by every client on every write. Lets a
+   * client ignore a room-metadata echo that is *older* than what it has
+   * already applied locally. Every echo carries a snapshot of the whole
+   * room, so the echo of a pose write (a different key, streamed while
+   * dragging) still includes the deck state as it was at that moment —
+   * and can land after a newer local change (a discard, a flip),
+   * briefly reviving the old state until the newer write's own echo
+   * arrives. Optional: rooms saved before this existed, and writes from
+   * older clients, have none and are always applied.
+   */
+  rev?: number;
 }
 
 export const EMPTY_STATE: DeckState = {

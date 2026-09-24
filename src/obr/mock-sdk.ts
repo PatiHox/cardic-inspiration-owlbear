@@ -21,6 +21,8 @@ const role: "GM" | "PLAYER" = params.get("role") === "GM" ? "GM" : "PLAYER";
 const id = params.get("id") ?? `mock-${name.toLowerCase()}`;
 const color = params.get("color") ?? (role === "GM" ? "#e0a020" : "#3c8dd0");
 const mode: "DARK" | "LIGHT" = params.get("theme") === "light" ? "LIGHT" : "DARK";
+/** Simulated round-trip time for a write's echo, ms (`?latency=400`). */
+const latency = Math.max(0, Number(params.get("latency") ?? 20) || 0);
 
 const STORAGE_KEY = "cardic-mock-room-metadata";
 const channel = new BroadcastChannel("cardic-mock-room");
@@ -118,12 +120,14 @@ const OBR = {
       metadata = next;
       localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
       channel.postMessage({ type: "metadata", metadata: next });
-      // Echo to the writer too, on a later tick, like the real round trip.
+      // Echo to the writer too, later, like the real round trip — with the
+      // metadata *as of this write*, not whatever is current by the time
+      // the echo fires: that's exactly what makes a late echo stale.
       return new Promise<void>((resolve) =>
         setTimeout(() => {
-          for (const l of metadataListeners) l(metadata);
+          for (const l of metadataListeners) l(next);
           resolve();
-        }, 20),
+        }, latency),
       );
     },
     onMetadataChange: (cb: (m: Metadata) => void) => {
