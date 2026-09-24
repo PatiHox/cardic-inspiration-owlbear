@@ -1,8 +1,21 @@
 name: Deploy to GitHub Pages
 
+# One Pages site, two channels:
+#   main  ->  https://<user>.github.io/<repo>/          (released extension)
+#   dev   ->  https://<user>.github.io/<repo>/dev/      (work in progress)
+#
+# A Pages deployment replaces the whole site, so every run builds *both*
+# branches — whichever one was pushed — and uploads them together. The
+# root is always built from `main` and `dev/` always from `dev`, never
+# from the branch that happened to trigger the run. If there's no `dev`
+# branch, only the root is published.
+#
+# Publishing something to the dev channel is just pushing it there:
+#   git push --force origin my-branch:dev
+
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
   workflow_dispatch:
 
 permissions:
@@ -18,16 +31,64 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - name: Check out main (site root)
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          path: prod
+
+      - name: Does a dev branch exist?
+        id: dev
+        run: |
+          if git ls-remote --exit-code --heads "https://github.com/${{ github.repository }}" dev >/dev/null; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check out dev (site /dev/)
+        if: steps.dev.outputs.exists == 'true'
+        uses: actions/checkout@v7
+        with:
+          ref: dev
+          path: dev
+
       - uses: actions/setup-node@v7
         with:
           node-version: 20
           cache: npm
-      - run: npm ci
-      - run: npm run build
+          cache-dependency-path: |
+            prod/package-lock.json
+            dev/package-lock.json
+
+      - name: Build main
+        working-directory: prod
+        run: |
+          npm ci
+          npm run build
+
+      - name: Build dev
+        if: steps.dev.outputs.exists == 'true'
+        working-directory: dev
+        env:
+          SITE_CHANNEL: dev
+        run: |
+          npm ci
+          npm run build
+
+      - name: Assemble site
+        run: |
+          mkdir -p site
+          cp -r prod/dist/. site/
+          if [ -d dev/dist ]; then
+            mkdir -p site/dev
+            cp -r dev/dist/. site/dev/
+          fi
+          find site -maxdepth 2 -name manifest.json
+
       - uses: actions/upload-pages-artifact@v5
         with:
-          path: dist
+          path: site
 
   deploy:
     needs: build

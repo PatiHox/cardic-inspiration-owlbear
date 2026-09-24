@@ -10,7 +10,7 @@
 // prefix those root-relative paths with REPO_BASE.
 import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { REPO_BASE } from "../site.config.mjs";
+import { CHANNEL, REPO_BASE } from "../site.config.mjs";
 
 const manifestPath = fileURLToPath(new URL("../dist/manifest.json", import.meta.url));
 const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
@@ -30,5 +30,16 @@ if (manifest.action) {
   manifest.action.popover = rebase(manifest.action.popover);
 }
 
+// A dev-channel build is a separate extension as far as OBR is concerned
+// (its own manifest URL), so make it tell itself apart from the released
+// one in the room's extension list and action bar. It still reads and
+// writes the same room-metadata key, so switching a room between the two
+// shows the same decks and hands.
+if (CHANNEL === "dev") {
+  manifest.name += " (dev)";
+  manifest.description = `Development build. ${manifest.description}`;
+  if (manifest.action) manifest.action.title += " (dev)";
+}
+
 writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + "\n");
-console.log(`Rebased dist/manifest.json paths under ${REPO_BASE}`);
+console.log(`Rebased dist/manifest.json paths under ${REPO_BASE} (${CHANNEL} channel)`);

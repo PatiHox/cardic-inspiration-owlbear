@@ -143,8 +143,40 @@ https://<your-github-username>.github.io/cardic-inspiration-owlbear/manifest.jso
 ```
 
 Use that URL as the install link instead of the localhost one. If you
-rename the repository, update `REPO_BASE` in
+rename the repository, update `REPO_ROOT` in
 [`site.config.mjs`](site.config.mjs) to match.
+
+### Dev channel
+
+The same Pages site also carries a second, independent build under
+`/dev/`, so a work-in-progress branch can be installed in a real Owlbear
+Rodeo room — alongside the released extension, as a separate entry named
+"Cardic Inspiration (dev)" — without touching what everyone else has
+installed:
+
+```
+https://<your-github-username>.github.io/cardic-inspiration-owlbear/dev/manifest.json
+```
+
+Whatever is on the `dev` branch is what's published there. To put a
+branch on the dev channel, push it to `dev`:
+
+```bash
+git push --force origin my-feature-branch:dev
+```
+
+Every deploy (a push to `main` *or* `dev`) rebuilds both channels from
+their own branches — the root from `main`, `/dev/` from `dev` — so
+neither can clobber the other, and if there's no `dev` branch only the
+root is published. The dev build is a normal `npm run build` with
+`SITE_CHANNEL=dev`, which changes the base path and adds the "(dev)"
+suffix to the manifest; both channels share the same room-metadata key,
+so switching a room from one to the other shows the same decks and hands.
+
+One-time setup: GitHub's auto-created `github-pages` environment only
+lets the default branch deploy, so a push to `dev` is rejected until you
+add `dev` to its allowed deployment branches (repo **Settings →
+Environments → github-pages → Deployment branches and tags**).
 
 ### Why `manifest.json` needs a rebase step
 
