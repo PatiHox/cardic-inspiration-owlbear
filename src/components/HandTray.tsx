@@ -5,6 +5,7 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type FocusEvent as ReactFocusEvent,
   type KeyboardEvent as ReactKeyboardEvent,
   type PointerEvent as ReactPointerEvent,
 } from "react";
@@ -135,6 +136,7 @@ interface TrayCardProps {
   removable?: boolean;
   onKeyDown?: (e: ReactKeyboardEvent<HTMLDivElement>) => void;
   onFocus?: () => void;
+  onBlur?: (e: ReactFocusEvent<HTMLDivElement>) => void;
   describedBy?: string;
 }
 
@@ -151,6 +153,7 @@ function TrayCard({
   removable = false,
   onKeyDown,
   onFocus,
+  onBlur,
   describedBy,
 }: TrayCardProps) {
   const style: CSSProperties = {
@@ -182,6 +185,7 @@ function TrayCard({
       draggable={false}
       onKeyDown={onKeyDown}
       onFocus={onFocus}
+      onBlur={onBlur}
     >
       {/* Both faces are always in the DOM so a reveal is a real 3D turn
           rather than a swap. `revealed` only ever goes false→true (see
@@ -961,6 +965,15 @@ export function OwnHandTray({
             describedBy={hintId}
             onKeyDown={onCardKeyDown(r)}
             onFocus={() => select(r.card.id)}
+            onBlur={(e) => {
+              // Focus moving off to the rest of the popover (Tab to the
+              // settings button, say) puts the card back down, the same as
+              // tapping elsewhere does. Focus landing on another card, a
+              // handle, or this tray's own menu keeps it lifted.
+              const next = e.relatedTarget as HTMLElement | null;
+              if (next && (shellRef.current?.contains(next) || next.closest?.(".tray-menu"))) return;
+              if (selectedRef.current === r.card.id && !menu) setSelectedId(null);
+            }}
           />
         ))}
       </div>
