@@ -10,6 +10,7 @@ import {
   flipCard,
   giveCard,
   handSize,
+  newId,
   renameStack,
   resetStack,
   setFaceCardScale,
@@ -115,8 +116,13 @@ export default function App() {
   // cap. A GM giving a card to themselves is the same DM action as giving
   // to anyone else: it bypasses the cap too (see giveCard in state.ts),
   // so a capped-out GM isn't left unable to add to their own hand.
-  const drawOrGiveToSelf = (stackId: string) =>
-    updateState((s) => (isGM ? giveCard : drawCard)(s, stackId, self));
+  // The drawn card's id is chosen here, once per action, not inside the
+  // state function: useOwlbear re-applies the action to the room's fresh
+  // state before writing, and the id must come out the same both times.
+  const drawOrGiveToSelf = (stackId: string) => {
+    const id = newId();
+    updateState((s) => (isGM ? giveCard : drawCard)(s, stackId, self, id));
+  };
 
   return (
     // `id="app-root"`: ConfirmDialog portals its overlay here (not
@@ -152,9 +158,10 @@ export default function App() {
         onReset={(stackId) => updateState((s) => resetStack(s, stackId))}
         onRename={(stackId, name) => updateState((s) => renameStack(s, stackId, name))}
         onDelete={(stackId) => updateState((s) => deleteStack(s, stackId))}
-        onCreate={(name, includeJokers, deckSizeId) =>
-          updateState((s) => createStack(s, name, includeJokers, deckSizeId))
-        }
+        onCreate={(name, includeJokers, deckSizeId) => {
+          const id = newId();
+          updateState((s) => createStack(s, name, includeJokers, deckSizeId, id));
+        }}
         playDrag={playDrag}
       />
 
@@ -170,7 +177,10 @@ export default function App() {
         onFlip={(drawnCardId) => updateState((s) => flipCard(s, drawnCardId))}
         onDiscard={(drawnCardId) => updateState((s) => discardCard(s, drawnCardId))}
         onDraw={drawOrGiveToSelf}
-        onGiveCard={(stackId, player) => updateState((s) => giveCard(s, stackId, player))}
+        onGiveCard={(stackId, player) => {
+          const id = newId();
+          updateState((s) => giveCard(s, stackId, player, id));
+        }}
         poses={poses}
         writeOwnPoses={(map) => writePoses(self.id, map)}
         onPlayDragChange={setPlayDrag}

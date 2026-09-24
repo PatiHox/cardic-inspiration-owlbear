@@ -85,10 +85,14 @@ the rest of that player's arrangement.
 
 All state lives in the Owlbear Rodeo room's metadata, which OBR syncs live
 to every connected client — that's what makes the popover "shared": every
-player who opens it sees the same live state. Card poses (position,
-stretch, rotation) are kept in a separate metadata key per player, so two
-players rearranging at the same moment can't overwrite each other, and
-that traffic never touches the deck state itself.
+player who opens it sees the same live state. Nobody's client ever writes
+on a timer: the deck state changes only when someone acts, and each action
+is re-applied to the room's *current* state right before it's written, so
+a client whose view has fallen behind can't write its stale copy back over
+other people's changes. Card poses (position, stretch, rotation) are kept
+in a separate metadata key per player, so two players rearranging at the
+same moment can't overwrite each other, and that traffic never touches the
+deck state itself.
 
 ## Installing in Owlbear Rodeo
 

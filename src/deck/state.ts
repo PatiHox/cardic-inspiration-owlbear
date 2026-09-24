@@ -78,7 +78,13 @@ export const EMPTY_STATE: DeckState = {
 /** Namespaced room-metadata key, per OBR's recommended reverse-DNS convention. */
 export const METADATA_KEY = "dev.owlbear-ext.inspiration-cards/state";
 
-function randomId(): string {
+/**
+ * A fresh id for a new stack or drawn card. Callers generate it *outside*
+ * the state function (see App.tsx) so that re-applying the same action to
+ * a fresher copy of the room state — which useOwlbear does before every
+ * write — produces the same id the optimistic local copy already shows.
+ */
+export function newId(): string {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
 
@@ -87,10 +93,11 @@ export function createStack(
   name: string,
   includeJokers: boolean,
   deckSizeId: string = DEFAULT_DECK_PRESET_ID,
+  id: string = newId(),
 ): DeckState {
   const preset = deckPreset(deckSizeId);
   const stack: Stack = {
-    id: randomId(),
+    id,
     name: name.trim() || "Inspiration Deck",
     includeJokers,
     deckSizeId: preset.id,
@@ -202,15 +209,18 @@ export function setGmHandVisibleToPlayers(state: DeckState, visible: boolean): D
 }
 
 /** Move the top card of a stack's draw pile into `player`'s hand, unconditionally. */
-function takeTopCard(state: DeckState, stackId: string, player: PlayerRef): DeckState {
+function takeTopCard(state: DeckState, stackId: string, player: PlayerRef, drawnId: string): DeckState {
   const stack = state.stacks.find((s) => s.id === stackId);
   if (!stack || stack.drawPile.length === 0) return state;
+  // Re-applied to a fresher state after this draw already landed? Then
+  // the card is in a hand already — nothing to do.
+  if (state.drawnCards.some((d) => d.id === drawnId)) return state;
 
   const drawPile = stack.drawPile.slice();
   const cardId = drawPile.pop()!;
 
   const drawn: DrawnCard = {
-    id: randomId(),
+    id: drawnId,
     cardId,
     stackId,
     playerId: player.id,
@@ -234,9 +244,11 @@ export function drawCard(
   state: DeckState,
   stackId: string,
   player: PlayerRef,
+  drawnId: string = newId(),
 ): DeckState {
+  if (state.drawnCards.some((d) => d.id === drawnId)) return state;
   if (isHandFull(state, player.id)) return state;
-  return takeTopCard(state, stackId, player);
+  return takeTopCard(state, stackId, player, drawnId);
 }
 
 /**
@@ -249,12 +261,15 @@ export function giveCard(
   state: DeckState,
   stackId: string,
   player: PlayerRef,
+  drawnId: string = newId(),
 ): DeckState {
-  return takeTopCard(state, stackId, player);
+  return takeTopCard(state, stackId, player, drawnId);
 }
 
 /** Flip a drawn card face-up. Should only be invoked by its owning player. */
 export function flipCard(state: DeckState, drawnCardId: string): DeckState {
+  const card = state.drawnCards.find((d) => d.id === drawnCardId);
+  if (!card || card.revealed) return state;
   return {
     ...state,
     drawnCards: state.drawnCards.map((d) =>

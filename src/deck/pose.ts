@@ -51,6 +51,8 @@ export const MAX_SCALE = 3;
 
 /** How often, at most, a player's in-progress pose edits are streamed to the room. */
 export const POSE_STREAM_INTERVAL_MS = 150;
+/** How long a locally edited pose may override an older room echo before the room wins. */
+export const POSE_ECHO_GRACE_MS = 4000;
 
 export const DEFAULT_POSE: Readonly<Omit<CardPose, "x" | "y">> = {
   scaleX: 1,

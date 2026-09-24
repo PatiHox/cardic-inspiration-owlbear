@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  POSE_ECHO_GRACE_MS,
   POSE_STREAM_INTERVAL_MS,
   posesEqual,
   type CardPose,
@@ -33,9 +34,11 @@ export interface OwnPoses {
  *    an *earlier* write can arrive after the local pose has moved on.
  *    Applying it would snap the card backwards for a frame. So a card
  *    that's been touched locally is "dirty", and incoming remote poses are
- *    ignored for it until the room's copy matches what we have — at which
- *    point there's nothing left to protect and remote becomes the source
- *    of truth again (reload, second tab of the same player, etc).
+ *    ignored for it until the room's copy matches what we have — or until
+ *    POSE_ECHO_GRACE_MS have passed since it was last touched, whichever
+ *    comes first. The time bound matters: if a write was lost, the room
+ *    must win eventually rather than this client keeping a pose nobody
+ *    else can see.
  *
  * Cards that no longer exist in `cardIds` are pruned on every write, so
  * discards and deck resets never leave orphaned poses behind.
@@ -49,7 +52,8 @@ export function useOwnPoses(
   const posesRef = useRef(poses);
   posesRef.current = poses;
 
-  const dirty = useRef(new Set<string>());
+  /** Cards touched locally, with when: local wins over remote for a bounded time only. */
+  const dirty = useRef(new Map<string, number>());
   const cardIdsRef = useRef(cardIds);
   cardIdsRef.current = cardIds;
   const writeRef = useRef(write);
@@ -75,11 +79,16 @@ export function useOwnPoses(
     for (const id of ids) {
       const mine = local[id];
       const theirs = incoming[id];
-      if (dirty.current.has(id)) {
-        if (posesEqual(mine, theirs)) dirty.current.delete(id);
-        if (mine) next[id] = mine;
-        else changed = true;
-        continue;
+      const touchedAt = dirty.current.get(id);
+      if (touchedAt != null) {
+        if (posesEqual(mine, theirs) || Date.now() - touchedAt > POSE_ECHO_GRACE_MS) {
+          // Landed (or long enough ago that the room is the truth now).
+          dirty.current.delete(id);
+        } else {
+          if (mine) next[id] = mine;
+          else changed = true;
+          continue;
+        }
       }
       if (theirs) {
         next[id] = theirs;
@@ -129,7 +138,7 @@ export function useOwnPoses(
 
   const setPose = useCallback(
     (cardId: string, pose: CardPose) => {
-      dirty.current.add(cardId);
+      dirty.current.set(cardId, Date.now());
       const next = { ...posesRef.current, [cardId]: pose };
       posesRef.current = next;
       setPoses(next);

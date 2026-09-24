@@ -24,7 +24,13 @@ export interface OwlbearContext {
   party: Player[];
   theme: Theme | null;
   deckState: DeckState;
-  /** Apply a pure state transition and sync the result to room metadata. */
+  /**
+   * Apply a pure state transition. The local view updates at once; the
+   * room write is re-applied to the room's *current* state fetched just
+   * before sending (see updateState below), so a stale local copy is
+   * never written back over other people's changes. Updaters must be
+   * pure and idempotent — safe to run twice, on two different bases.
+   */
   updateState: (updater: (state: DeckState) => DeckState) => void;
   /**
    * Every player's card poses (position/stretch/rotation in their hand
@@ -41,6 +47,13 @@ export interface OwlbearContext {
    */
   writePoses: (playerId: string, poses: PoseMap | null) => Promise<void>;
 }
+
+/**
+ * How long a client's optimistic local state may override an older room
+ * echo while its own write is in flight. Generous next to a real round
+ * trip (well under a second), but still finite.
+ */
+const WRITE_GRACE_MS = 4000;
 
 function parseDeckState(metadata: Metadata): DeckState {
   const value = metadata[METADATA_KEY];
@@ -80,6 +93,41 @@ export function useOwlbear(): OwlbearContext {
 
   useEffect(() => OBR.onReady(() => setSdkReady(true)), []);
 
+  // --- Deck-state writes ----------------------------------------------------
+  //
+  // Room metadata is last-write-wins per key, and the whole deck state is
+  // one key. Writing it straight from this client's local copy would put
+  // that copy's *staleness* into the room: a DM who acts a moment after a
+  // player discarded, before that discard reached them, would write the
+  // card right back into the player's hand. So every write is rebased:
+  // the updater is re-run on the room's current metadata, fetched from
+  // the OBR frontend just before sending. Writes are serialized so each
+  // one sees the previous one's result.
+  //
+  // Stale-echo protection is *bounded*. Every change event carries a
+  // snapshot of the whole room, so the echo of an older write (a streamed
+  // pose, say) can arrive after a newer local change and briefly carry
+  // the older deck state. Such an echo is ignored only while one of our
+  // own writes is unconfirmed — until an incoming state carries our
+  // written rev, or WRITE_GRACE_MS pass — never longer: past that, the
+  // room is the truth even if it means our change didn't land, because a
+  // client that silently keeps a state the room doesn't have is the
+  // worst outcome of all (that is exactly what "cards vanish for the
+  // player, still there for everyone else" looked like).
+  const writeQueue = useRef<Promise<void>>(Promise.resolve());
+  const lastWrittenRev = useRef(0);
+  const unconfirmedUntil = useRef(0);
+
+  const applyIncoming = useCallback((incoming: DeckState) => {
+    if (incoming.rev != null && incoming.rev >= lastWrittenRev.current) unconfirmedUntil.current = 0;
+    const protectedWindow = Date.now() < unconfirmedUntil.current;
+    setDeckState((current) => {
+      const older = incoming.rev != null && current.rev != null && incoming.rev < current.rev;
+      return older && protectedWindow ? current : incoming;
+    });
+  }, []);
+
+
   useEffect(() => {
     if (!sdkReady) return;
 
@@ -112,13 +160,7 @@ export function useOwlbear(): OwlbearContext {
       }
     });
     const unsubscribeRoom = OBR.room.onMetadataChange((metadata) => {
-      const incoming = parseDeckState(metadata);
-      // Drop echoes older than what we've already applied — see `rev` in
-      // state.ts. A missing rev on either side (old room, old client)
-      // means "can't tell", and the incoming state wins as before.
-      setDeckState((current) =>
-        incoming.rev != null && current.rev != null && incoming.rev < current.rev ? current : incoming,
-      );
+      applyIncoming(parseDeckState(metadata));
       setPoses(parsePoses(metadata));
     });
 
@@ -129,19 +171,43 @@ export function useOwlbear(): OwlbearContext {
       unsubscribeTheme();
       unsubscribeRoom();
     };
-  }, [sdkReady]);
+  }, [sdkReady, applyIncoming]);
 
-  const updateState = useCallback((updater: (state: DeckState) => DeckState) => {
-    const current = deckStateRef.current;
-    const updated = updater(current);
-    // Every state function returns its input untouched when there's
-    // nothing to do (a blocked draw, an unknown id) — no write for those.
-    if (updated === current) return;
-    const next: DeckState = { ...updated, rev: (current.rev ?? 0) + 1 };
-    deckStateRef.current = next;
-    setDeckState(next);
-    void OBR.room.setMetadata({ [METADATA_KEY]: next });
-  }, []);
+  const updateState = useCallback(
+    (updater: (state: DeckState) => DeckState) => {
+      const current = deckStateRef.current;
+      const optimistic = updater(current);
+      // Every state function returns its input untouched when there's
+      // nothing to do (a blocked draw, an unknown id) — no write for those.
+      if (optimistic === current) return;
+      const localRev = Math.max(current.rev ?? 0, lastWrittenRev.current) + 1;
+      const stamped: DeckState = { ...optimistic, rev: localRev };
+      deckStateRef.current = stamped;
+      setDeckState(stamped);
+      unconfirmedUntil.current = Date.now() + WRITE_GRACE_MS;
+
+      writeQueue.current = writeQueue.current
+        .then(async () => {
+          const fresh = parseDeckState(await OBR.room.getMetadata());
+          const next = updater(fresh);
+          if (next !== fresh) {
+            const rev = Math.max(fresh.rev ?? 0, lastWrittenRev.current) + 1;
+            lastWrittenRev.current = rev;
+            unconfirmedUntil.current = Date.now() + WRITE_GRACE_MS;
+            await OBR.room.setMetadata({ [METADATA_KEY]: { ...next, rev } });
+          }
+          // Whatever the room holds now — our write included, or a
+          // no-op because it was already there — is what we show.
+          unconfirmedUntil.current = 0;
+          applyIncoming(parseDeckState(await OBR.room.getMetadata()));
+        })
+        .catch((err: unknown) => {
+          console.error("Cardic Inspiration: room write failed", err);
+          unconfirmedUntil.current = 0;
+        });
+    },
+    [applyIncoming],
+  );
 
   const writePoses = useCallback((playerId: string, map: PoseMap | null) => {
     // Deliberately NOT mirrored into `poses` optimistically: the writer's

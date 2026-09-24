@@ -23,6 +23,14 @@ const color = params.get("color") ?? (role === "GM" ? "#e0a020" : "#3c8dd0");
 const mode: "DARK" | "LIGHT" = params.get("theme") === "light" ? "LIGHT" : "DARK";
 /** Simulated round-trip time for a write's echo, ms (`?latency=400`). */
 const latency = Math.max(0, Number(params.get("latency") ?? 20) || 0);
+/**
+ * `?deaf=1`: this tab's *listeners* never hear room changes made by other
+ * tabs (its stored metadata still updates, like the OBR frontend's copy
+ * would). Simulates an extension whose React state has fallen behind.
+ */
+const deaf = params.get("deaf") === "1";
+/** `?dropDeckWrites=N`: silently lose this tab's first N deck-state writes. */
+let dropDeckWrites = Math.max(0, Number(params.get("dropDeckWrites") ?? 0) || 0);
 
 const STORAGE_KEY = "cardic-mock-room-metadata";
 const channel = new BroadcastChannel("cardic-mock-room");
@@ -59,7 +67,7 @@ channel.onmessage = (ev) => {
   const msg = ev.data;
   if (msg.type === "metadata") {
     metadata = msg.metadata;
-    for (const l of metadataListeners) l(metadata);
+    if (!deaf) for (const l of metadataListeners) l(metadata);
   } else if (msg.type === "hello") {
     others.set(msg.player.id, msg.player);
     channel.postMessage({ type: "here", player: self });
@@ -112,6 +120,10 @@ const OBR = {
   room: {
     getMetadata: () => Promise.resolve(metadata),
     setMetadata: (update: Partial<Metadata>) => {
+      if (dropDeckWrites > 0 && Object.keys(update).some((k) => k.endsWith("/state"))) {
+        dropDeckWrites--;
+        return Promise.resolve();
+      }
       const next: Metadata = { ...metadata };
       for (const [k, v] of Object.entries(update)) {
         if (v === undefined) delete next[k];
