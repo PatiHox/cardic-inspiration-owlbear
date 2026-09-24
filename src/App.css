@@ -925,6 +925,21 @@
   outline: none;
 }
 
+.tray-card--removable {
+  /* A DM's view of someone else's card: no dragging, so no grab cursor —
+     the context-menu cursor hints at the one thing that *is* available. */
+  cursor: context-menu;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.tray-card--removable:hover,
+.tray-card--removable:focus-visible {
+  filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.3));
+  outline: none;
+}
+
 .tray-card--active {
   transition: none;
   cursor: grabbing;

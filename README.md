@@ -40,7 +40,7 @@ value and use it as a bonus on a roll. There's no automatic roll integration
   the player plays it, returning it to that deck's discard pile.
 - DM-only controls: create/rename/delete a deck, shuffle its draw pile,
   "reset" a deck (shuffles the discard pile and any outstanding hands back
-  into the draw pile), and — via the ⚙ **Settings** popup — cap how many
+  into the draw pile), remove a single card from any player's hand, and — via the ⚙ **Settings** popup — cap how many
   cards a single player may hold across all decks at once, and set the
   face-card value scale above.
 
@@ -69,8 +69,11 @@ the cards. Everything works the same with a mouse, a finger or a pen:
 Everyone sees your cards where and how you've placed them, mirrored
 smaller under your name in their view, and they see them move as you drag
 (streamed at a bounded rate so a long drag doesn't flood the room). Only
-you can handle your own cards — nobody else's tray is editable, the DM's
-included.
+you can place and shape your own cards — nobody else's tray is editable,
+the DM's included. The one exception: the DM can **remove** a card from
+any player's hand (right-click or long-press it, or focus it and press
+Delete), which returns it to its deck's discard pile without revealing it
+and without disturbing the rest of that player's arrangement.
 
 All state lives in the Owlbear Rodeo room's metadata, which OBR syncs live
 to every connected client — that's what makes the popover "shared": every

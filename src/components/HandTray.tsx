@@ -131,6 +131,8 @@ interface TrayCardProps {
   /** Hidden while its ghost is floating outside the tray. */
   hidden?: boolean;
   interactive?: boolean;
+  /** A DM viewing someone else's tray: focusable, with a remove menu, nothing else. */
+  removable?: boolean;
   onKeyDown?: (e: ReactKeyboardEvent<HTMLDivElement>) => void;
   onFocus?: () => void;
   describedBy?: string;
@@ -146,6 +148,7 @@ function TrayCard({
   active = false,
   hidden = false,
   interactive = false,
+  removable = false,
   onKeyDown,
   onFocus,
   describedBy,
@@ -161,17 +164,20 @@ function TrayCard({
     (selected ? " tray-card--lifted" : "") +
     (active ? " tray-card--active" : "") +
     (hidden ? " tray-card--hidden" : "") +
-    (interactive ? " tray-card--own" : "");
+    (interactive ? " tray-card--own" : "") +
+    (removable ? " tray-card--removable" : "");
   const name = cardAccessibleName(card, faceCardScale);
+  const focusable = interactive || removable;
   return (
     <div
       className={className}
       style={style}
       data-card-id={card.id}
-      role={interactive ? "button" : "listitem"}
-      tabIndex={interactive ? 0 : undefined}
+      role={focusable ? "button" : "listitem"}
+      tabIndex={focusable ? 0 : undefined}
       aria-label={interactive && selected ? `${name}, lifted` : name}
       aria-pressed={interactive ? selected : undefined}
+      title={removable ? "Right-click or long-press to remove this card from the hand" : undefined}
       aria-describedby={describedBy}
       draggable={false}
       onKeyDown={onKeyDown}
@@ -202,30 +208,157 @@ interface HandTrayProps {
   poses: PoseMap;
   faceCardScale: FaceCardScale;
   playerName: string;
+  /**
+   * DM only: take a card out of this hand (back to its deck's discard
+   * pile), via right-click / long-press menu or Delete on a focused card.
+   * That is the *only* thing a DM can do here — the owner's placement and
+   * shaping are theirs alone, and a face-down card stays face-down.
+   */
+  onRemove?: (drawnCardId: string) => void;
 }
 
 /**
  * Someone else's hand, mirrored at COMPACT_TRAY_SCALE. Incoming pose
  * changes are streamed at a bounded rate by their owner, so cards here
  * animate between updates (see .tray-card's transition) instead of
- * teleporting.
+ * teleporting. Never writes a pose.
  */
-export function HandTray({ cards, poses, faceCardScale, playerName }: HandTrayProps) {
+export function HandTray({ cards, poses, faceCardScale, playerName, onRemove }: HandTrayProps) {
   const trayRef = useRef<HTMLDivElement>(null);
   const tray = useElementSize(trayRef);
   const scale = COMPACT_TRAY_SCALE;
   const logical = { w: tray.w / scale, h: tray.h / scale };
   const resolved = resolvePoses(cards, poses, logical);
+  const byId = new Map(resolved.map((r) => [r.card.id, r]));
+
+  const [menu, setMenu] = useState<Menu | null>(null);
+  const press = useRef<{ cardId: string; pointerId: number; start: Point; timer: ReturnType<typeof setTimeout> } | null>(
+    null,
+  );
+  const hintId = `hand-tray-remove-hint-${playerName.replace(/\W+/g, "-")}`;
+
+  useEffect(() => {
+    if (menu && !byId.has(menu.cardId)) setMenu(null);
+  });
+
+  const cancelPress = () => {
+    if (press.current) clearTimeout(press.current.timer);
+    press.current = null;
+  };
+
+  const cardIdAt = (target: EventTarget | null) =>
+    (target as HTMLElement | null)?.closest?.<HTMLElement>("[data-card-id]")?.dataset.cardId ?? null;
+
+  const removeHandlers = onRemove
+    ? {
+        onPointerDown: (e: ReactPointerEvent<HTMLDivElement>) => {
+          if (e.pointerType === "mouse" && e.button !== 0) return;
+          const cardId = cardIdAt(e.target);
+          if (!cardId || !trayRef.current?.contains(e.target as Node)) return;
+          cancelPress();
+          const client = { x: e.clientX, y: e.clientY };
+          const timer = setTimeout(() => {
+            if (press.current?.cardId === cardId) {
+              press.current = null;
+              setMenu({ cardId, ...client });
+            }
+          }, LONG_PRESS_MS);
+          press.current = { cardId, pointerId: e.pointerId, start: client, timer };
+        },
+        onPointerMove: (e: ReactPointerEvent<HTMLDivElement>) => {
+          const p = press.current;
+          if (p && p.pointerId === e.pointerId && dist(p.start, { x: e.clientX, y: e.clientY }) >= TAP_SLOP_PX) {
+            cancelPress();
+          }
+        },
+        onPointerUp: cancelPress,
+        onPointerCancel: cancelPress,
+        onContextMenu: (e: React.MouseEvent<HTMLDivElement>) => {
+          const cardId = cardIdAt(e.target);
+          if (!cardId) return;
+          e.preventDefault();
+          cancelPress();
+          if (!menu) setMenu({ cardId, x: e.clientX, y: e.clientY });
+        },
+      }
+    : {};
+
+  const onCardKeyDown = (cardId: string) => (e: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (!onRemove) return;
+    switch (e.key) {
+      case "Delete":
+      case "Backspace":
+        onRemove(cardId);
+        break;
+      case "Enter":
+      case " ":
+      case "ContextMenu":
+      case "F10": {
+        if (e.key === "F10" && !e.shiftKey) return;
+        const rect = e.currentTarget.getBoundingClientRect();
+        setMenu({ cardId, x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
+        break;
+      }
+      case "Escape":
+        setMenu(null);
+        break;
+      default:
+        return;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const menuCard = menu ? byId.get(menu.cardId) ?? null : null;
+  const portalTarget = document.getElementById("app-root") ?? document.body;
+
   return (
     <div
-      className="hand-tray-shell hand-tray-shell--compact"
+      className={"hand-tray-shell hand-tray-shell--compact" + (onRemove ? " hand-tray-shell--removable" : "")}
       style={{ "--tray-scale": scale, "--tray-aspect": TRAY_ASPECT } as CSSProperties}
+      {...removeHandlers}
     >
-      <div ref={trayRef} className="hand-tray" role="list" aria-label={`${playerName}'s cards`}>
+      {onRemove && (
+        <p id={hintId} className="sr-only">
+          {playerName}'s cards. As the DM you can remove a card from this hand: press Delete on it, or press Enter
+          for a menu. With a pointer, right-click or long-press it.
+        </p>
+      )}
+      <div ref={trayRef} className="hand-tray" role={onRemove ? undefined : "list"} aria-label={`${playerName}'s cards`}>
         {resolved.map(({ card, pose }) => (
-          <TrayCard key={card.id} card={card} pose={pose} tray={tray} scale={scale} faceCardScale={faceCardScale} />
+          <TrayCard
+            key={card.id}
+            card={card}
+            pose={pose}
+            tray={tray}
+            scale={scale}
+            faceCardScale={faceCardScale}
+            removable={!!onRemove}
+            describedBy={onRemove ? hintId : undefined}
+            onKeyDown={onRemove ? onCardKeyDown(card.id) : undefined}
+          />
         ))}
       </div>
+      {menuCard &&
+        menu &&
+        onRemove &&
+        createPortal(
+          <TrayMenu
+            x={menu.x}
+            y={menu.y}
+            onClose={() => setMenu(null)}
+            items={[
+              {
+                label: "Remove from hand",
+                onSelect: () => {
+                  setMenu(null);
+                  onRemove(menuCard.card.id);
+                },
+              },
+            ]}
+          />,
+          portalTarget,
+        )}
     </div>
   );
 }
@@ -884,12 +1017,16 @@ export function OwnHandTray({
         menu &&
         createPortal(
           <TrayMenu
-            card={menuCard.card}
-            posed={menuCard.posed}
             x={menu.x}
             y={menu.y}
-            onAction={runMenu}
             onClose={() => setMenu(null)}
+            items={[
+              menuCard.card.revealed
+                ? { label: "Play", onSelect: () => runMenu("play") }
+                : { label: "Flip", onSelect: () => runMenu("flip") },
+              { label: "Bring to front", onSelect: () => runMenu("front") },
+              { label: "Reset shape", onSelect: () => runMenu("reset"), disabled: !menuCard.posed },
+            ]}
           />,
           portalTarget,
         )}
@@ -901,19 +1038,21 @@ export function OwnHandTray({
 // Long-press / right-click menu
 // ---------------------------------------------------------------------------
 
+export interface TrayMenuItem {
+  label: string;
+  onSelect: () => void;
+  disabled?: boolean;
+}
+
 function TrayMenu({
-  card,
-  posed,
+  items,
   x,
   y,
-  onAction,
   onClose,
 }: {
-  card: DrawnCard;
-  posed: boolean;
+  items: TrayMenuItem[];
   x: number;
   y: number;
-  onAction: (action: "flip" | "play" | "reset" | "front") => void;
   onClose: () => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -928,41 +1067,38 @@ function TrayMenu({
       x: clamp(x, 4, Math.max(4, window.innerWidth - r.width - 4)),
       y: clamp(y, 4, Math.max(4, window.innerHeight - r.height - 4)),
     });
-    el.querySelector<HTMLElement>("button")?.focus();
+    el.querySelector<HTMLElement>("button:not(:disabled)")?.focus();
   }, [x, y]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
+    const onDown = (e: PointerEvent) => {
+      if (!ref.current?.contains(e.target as Node)) onClose();
+    };
     document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
+    document.addEventListener("pointerdown", onDown, true);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("pointerdown", onDown, true);
+    };
   }, [onClose]);
 
   return (
     <div ref={ref} className="tray-menu" role="menu" style={{ left: pos.x, top: pos.y }}>
-      {!card.revealed && (
-        <button type="button" role="menuitem" className="tray-menu-item" onClick={() => onAction("flip")}>
-          Flip
+      {items.map((item) => (
+        <button
+          key={item.label}
+          type="button"
+          role="menuitem"
+          className="tray-menu-item"
+          disabled={item.disabled}
+          onClick={item.onSelect}
+        >
+          {item.label}
         </button>
-      )}
-      {card.revealed && (
-        <button type="button" role="menuitem" className="tray-menu-item" onClick={() => onAction("play")}>
-          Play
-        </button>
-      )}
-      <button type="button" role="menuitem" className="tray-menu-item" onClick={() => onAction("front")}>
-        Bring to front
-      </button>
-      <button
-        type="button"
-        role="menuitem"
-        className="tray-menu-item"
-        disabled={!posed}
-        onClick={() => onAction("reset")}
-      >
-        Reset shape
-      </button>
+      ))}
     </div>
   );
 }

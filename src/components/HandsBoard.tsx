@@ -122,6 +122,7 @@ export function HandsBoard({
               faceCardScale={faceCardScale}
               poses={isSelf ? ownPoses.poses : poses[hand.player.id] ?? EMPTY_POSES}
               ownPoses={isSelf ? ownPoses : null}
+              canRemove={isGM && !isSelf}
               onFlip={onFlip}
               onDiscard={onDiscard}
               onDropCard={(stackId) => (isSelf ? onDraw(stackId) : onGiveCard(stackId, hand.player))}
@@ -144,6 +145,7 @@ function HandRow({
   faceCardScale,
   poses,
   ownPoses,
+  canRemove,
   onFlip,
   onDiscard,
   onDropCard,
@@ -157,6 +159,8 @@ function HandRow({
   poses: PoseMap;
   /** Only for the viewer's own row: the editable pose map. */
   ownPoses: ReturnType<typeof useOwnPoses> | null;
+  /** A DM looking at someone else's row may remove cards from it (and nothing more). */
+  canRemove: boolean;
   onFlip: (drawnCardId: string) => void;
   onDiscard: (drawnCardId: string) => void;
   onDropCard: (stackId: string) => void;
@@ -235,7 +239,13 @@ function HandRow({
           onPlayDragChange={onPlayDragChange}
         />
       ) : (
-        <HandTray cards={hand.cards} poses={poses} faceCardScale={faceCardScale} playerName={hand.player.name} />
+        <HandTray
+          cards={hand.cards}
+          poses={poses}
+          faceCardScale={faceCardScale}
+          playerName={hand.player.name}
+          onRemove={canRemove ? onDiscard : undefined}
+        />
       )}
     </li>
   );
