@@ -52,8 +52,8 @@ the cards. Everything works the same with a mouse, a finger or a pen:
 - **Move** a card by dragging it anywhere in your tray.
 - **Lift** a card by tapping it. A lifted card hovers above the tray and
   shows a frame: drag an edge handle to stretch it along one axis, a
-  corner to scale it (hold Shift to stretch freely), or the knob above it
-  to rotate (Shift snaps to 15°). On a touchscreen, pinch a lifted card to
+  corner to stretch both freely (hold Shift to keep its proportions), or
+  the knob above it to rotate (Shift snaps to 15°). On a touchscreen, pinch a lifted card to
   scale it and twist to rotate.
 - **Flip** a card by double-tapping (double-clicking) it. A single tap
   only lifts it, and a slow second tap does nothing, so an idle click

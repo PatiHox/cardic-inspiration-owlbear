@@ -836,7 +836,9 @@ export function OwnHandTray({
       case "stretch": {
         if (g.pointerId !== e.pointerId) return;
         const corner = g.dir.ux !== 0 && g.dir.uy !== 0;
-        const uniform = corner && !e.shiftKey;
+        // Corners stretch both axes freely — no proportion constraint —
+        // unless Shift is held, which keeps the card's aspect ratio.
+        const uniform = corner && e.shiftKey;
         setPose(g.cardId, stretchPose(g.startPose, g.dir, trayPoint(client), uniform, tray.w, tray.h));
         return;
       }

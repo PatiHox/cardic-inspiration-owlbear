@@ -254,8 +254,9 @@ export function rotateKnobPosition(box: PoseBox): Point {
 /**
  * Resize `start` by dragging handle `dir` to the pointer at `p` (tray px).
  * The opposite edge/corner stays anchored, like every design tool. Edge
- * handles stretch one axis; corners stretch both, either freely or —
- * with `uniform` — keeping the card's aspect ratio. Returns the new pose.
+ * handles stretch one axis; corners stretch both axes independently by
+ * default, or — with `uniform` (Shift held) — keep the card's aspect
+ * ratio. Returns the new pose.
  */
 export function stretchPose(
   start: CardPose,
