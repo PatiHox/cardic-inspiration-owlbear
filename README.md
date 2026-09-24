@@ -55,9 +55,10 @@ the cards. Everything works the same with a mouse, a finger or a pen:
   corner to scale it (hold Shift to stretch freely), or the knob above it
   to rotate (Shift snaps to 15°). On a touchscreen, pinch a lifted card to
   scale it and twist to rotate.
-- **Flip** a card by tapping it a second time while it's lifted. The lift
-  is the "are you sure?" step: **a flipped card can never be flipped back**,
-  and its value is visible to the whole table from then on.
+- **Flip** a card by double-tapping (double-clicking) it. A single tap
+  only lifts it, and a slow second tap does nothing, so an idle click
+  can't reveal a card: **a flipped card can never be flipped back**, and
+  its value is visible to the whole table from then on.
 - **Play** a revealed card by dragging it out of your tray and dropping it
   on its deck's discard pile, which lights up as you approach.
 - **Discard without flipping**: a face-down card can be dragged to the

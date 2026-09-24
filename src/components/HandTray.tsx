@@ -44,6 +44,9 @@ const TAP_SLOP_PX = 6;
 /** Hold without moving this long to open the card menu (touch users' route to it). */
 const LONG_PRESS_MS = 500;
 const ROTATE_SNAP_DEG = 15;
+/** Two taps on the same card this close together (in time and space) are a double-tap. */
+const DOUBLE_TAP_MS = 350;
+const DOUBLE_TAP_SLOP_PX = 24;
 const NUDGE_PX = 4;
 const KEY_SCALE_STEP = 0.1;
 /** Auto-scroll the popover when a ghost drag gets this close to its edge. */
@@ -646,6 +649,8 @@ export function OwnHandTray({
 
   const gesture = useRef<Gesture | null>(null);
   const pointers = useRef(new Map<number, Point>());
+  /** The previous tap, so the next one can be recognised as a double-tap. */
+  const lastTap = useRef<{ cardId: string; at: number; point: Point } | null>(null);
   const carry = useCarryToDiscard(onPlayDragChange, () => gesture.current?.kind === "move");
   const ghost = carry.ghost;
   const hintId = "hand-tray-keys-hint";
@@ -869,6 +874,7 @@ export function OwnHandTray({
 
   const onPointerUp = (e: ReactPointerEvent<HTMLDivElement>) => {
     pointers.current.delete(e.pointerId);
+    const client = { x: e.clientX, y: e.clientY };
     const g = gesture.current;
     if (!g) return;
     if (g.kind === "pinch") {
@@ -879,14 +885,30 @@ export function OwnHandTray({
     if (g.pointerId !== e.pointerId) return;
 
     if (g.kind === "press") {
-      // A tap. First tap lifts the card (hovering); a second tap on the
-      // lifted, still face-down card turns it over.
+      // A tap lifts the card (hovering). A *double*-tap — a second tap on
+      // the same card within DOUBLE_TAP_MS — turns a face-down card over.
+      // A slow second tap on a lifted card does nothing, so an idle click
+      // can't reveal a card by accident; the flip takes a deliberate
+      // double-tap (or Enter on the lifted card, or the menu).
       clearTimeout(g.timer);
       const r = byId.get(g.cardId);
       gesture.current = null;
       if (r) {
-        if (selectedRef.current !== g.cardId) select(g.cardId);
-        else if (!r.card.revealed) onFlip(g.cardId);
+        const now = performance.now();
+        const prev = lastTap.current;
+        const isDouble =
+          prev !== null &&
+          prev.cardId === g.cardId &&
+          now - prev.at <= DOUBLE_TAP_MS &&
+          dist(prev.point, client) <= DOUBLE_TAP_SLOP_PX;
+        if (isDouble) {
+          lastTap.current = null;
+          if (selectedRef.current !== g.cardId) select(g.cardId);
+          if (!r.card.revealed) onFlip(g.cardId);
+        } else {
+          lastTap.current = { cardId: g.cardId, at: now, point: client };
+          if (selectedRef.current !== g.cardId) select(g.cardId);
+        }
       }
       return endGesture();
     }
@@ -1050,7 +1072,8 @@ export function OwnHandTray({
       onContextMenu={onContextMenu}
     >
       <p id={hintId} className="sr-only">
-        Your cards. Press Enter to lift a card, and Enter again to flip a lifted face-down card. Arrow keys move
+        Your cards. Press Enter to lift a card, and Enter again to flip a lifted face-down card; with a pointer,
+        tap to lift and double-tap to flip. Arrow keys move
         it, square brackets rotate it, plus and minus resize it, Delete plays a revealed card or discards a
         face-down one without flipping it, Escape puts it down. With a pointer: drag to move, use the frame
         handles to stretch and rotate, drop a card on its deck's discard pile to play or discard it, and
