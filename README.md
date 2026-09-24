@@ -14,7 +14,8 @@ value and use it as a bonus on a roll. There's no automatic roll integration
 - The DM creates one or more standard 52-card decks (with an optional pair
   of jokers) from the extension popover.
 - Any player can draw a card from a deck into their own hand. It shows up
-  face-down for everyone.
+  face-down for everyone, in that player's **hand tray** — a space they
+  can arrange however they like (see below).
 - **A card's value is secret from everyone — including the DM — until the
   owning player flips it.** Before that, all anyone sees is a face-down
   count per player. There's no server enforcing this; it's just what the UI
@@ -36,16 +37,47 @@ value and use it as a bonus on a roll. There's no automatic roll integration
 
   Edit `cardBonus`/`cardBonusLabel` in [`src/deck/cards.ts`](src/deck/cards.ts)
   if your table plays a different scale entirely. After a card's been used,
-  the player discards it, returning it to that deck's discard pile.
+  the player plays it, returning it to that deck's discard pile.
 - DM-only controls: create/rename/delete a deck, shuffle its draw pile,
   "reset" a deck (shuffles the discard pile and any outstanding hands back
   into the draw pile), and — via the ⚙ **Settings** popup — cap how many
   cards a single player may hold across all decks at once, and set the
   face-card value scale above.
 
+### Handling your cards
+
+Your own hand is a tray you handle directly — there are no buttons under
+the cards. Everything works the same with a mouse, a finger or a pen:
+
+- **Move** a card by dragging it anywhere in your tray.
+- **Lift** a card by tapping it. A lifted card hovers above the tray and
+  shows a frame: drag an edge handle to stretch it along one axis, a
+  corner to scale it (hold Shift to stretch freely), or the knob above it
+  to rotate (Shift snaps to 15°). On a touchscreen, pinch a lifted card to
+  scale it and twist to rotate.
+- **Flip** a card by tapping it a second time while it's lifted. The lift
+  is the "are you sure?" step: **a flipped card can never be flipped back**,
+  and its value is visible to the whole table from then on.
+- **Play** a revealed card by dragging it out of your tray and dropping it
+  on its deck's discard pile, which lights up as you approach.
+- **Long-press or right-click** a card for a menu with Flip / Play, Bring
+  to front and Reset shape.
+- **Keyboard**: Tab to a card (that lifts it), Enter flips a face-down one,
+  arrow keys move it, `[` and `]` rotate, `+`/`-` resize, Delete plays a
+  revealed one, Escape puts it down.
+
+Everyone sees your cards where and how you've placed them, mirrored
+smaller under your name in their view, and they see them move as you drag
+(streamed at a bounded rate so a long drag doesn't flood the room). Only
+you can handle your own cards — nobody else's tray is editable, the DM's
+included.
+
 All state lives in the Owlbear Rodeo room's metadata, which OBR syncs live
 to every connected client — that's what makes the popover "shared": every
-player who opens it sees the same live state.
+player who opens it sees the same live state. Card poses (position,
+stretch, rotation) are kept in a separate metadata key per player, so two
+players rearranging at the same moment can't overwrite each other, and
+that traffic never touches the deck state itself.
 
 ## Installing in Owlbear Rodeo
 
@@ -84,6 +116,21 @@ Open the same room in a second browser profile (or an incognito window)
 signed in as a different player to see live syncing between GM and player
 views.
 
+### Running without Owlbear Rodeo
+
+```bash
+npm run dev:mock
+```
+
+swaps the OBR SDK for [`src/obr/mock-sdk.ts`](src/obr/mock-sdk.ts), so
+the popover runs in a plain browser tab. Query parameters pick who you
+are: `http://localhost:5173/?player=Alice` and
+`http://localhost:5173/?player=DM&role=GM` in two tabs behave like two
+people in one room (state is shared between tabs and persisted in
+`localStorage`; add `&theme=light` for the light theme). Handy for working
+on the hand-tray gestures, or for driving the popover with a browser
+automation tool. The mock is never part of a production build.
+
 ## Deploying
 
 Pushing to `main` runs [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml),
@@ -121,8 +168,10 @@ site.config.mjs                REPO_BASE — the GitHub Pages repo path, single 
 scripts/rebase-manifest.mjs    Post-build step: rewrites dist/manifest.json under REPO_BASE
 src/deck/cards.ts              Card ids, labels, shuffling
 src/deck/state.ts              Deck/hand state shape + pure state-transition functions
+src/deck/pose.ts               Card poses (position/stretch/rotation) + transform-frame geometry
 src/obr/useOwlbear.ts          Hook wrapping the OBR SDK: ready state, player/role,
-                                party roster, theme, and synced deck state
+                                party roster, theme, synced deck state and poses
+src/obr/mock-sdk.ts            Stand-in SDK for `npm run dev:mock` (never built)
 src/components/                UI: stack list, DM controls, per-player hands
 ```
 

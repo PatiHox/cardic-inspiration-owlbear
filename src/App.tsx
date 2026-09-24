@@ -21,6 +21,7 @@ import { StackList } from "./components/StackList";
 import { HandsBoard } from "./components/HandsBoard";
 import { SettingsModal } from "./components/SettingsModal";
 import { GearIcon } from "./components/icons";
+import type { PlayDrag } from "./components/HandTray";
 import "./App.css";
 
 function themeVars(theme: Theme | null): CSSProperties {
@@ -64,9 +65,13 @@ function themeVars(theme: Theme | null): CSSProperties {
 }
 
 export default function App() {
-  const { ready, self, party, theme, deckState, updateState } = useOwlbear();
+  const { ready, self, party, theme, deckState, updateState, poses, writePoses } = useOwlbear();
   const isGM = ready && self?.role === "GM";
   const [settingsOpen, setSettingsOpen] = useState(false);
+  // A revealed card being dragged from the viewer's hand toward a discard
+  // pile. Lives here because the pile (in StackList) and the drag (in
+  // HandsBoard) are in different panels.
+  const [playDrag, setPlayDrag] = useState<PlayDrag | null>(null);
 
   // Old rooms saved before this setting existed have no `gmHandVisibleToPlayers`
   // field at all — treat that the same way `maxHandSize`/`faceCardScale`
@@ -143,6 +148,7 @@ export default function App() {
         onCreate={(name, includeJokers, deckSizeId) =>
           updateState((s) => createStack(s, name, includeJokers, deckSizeId))
         }
+        playDrag={playDrag}
       />
 
       <HandsBoard
@@ -158,6 +164,9 @@ export default function App() {
         onDiscard={(drawnCardId) => updateState((s) => discardCard(s, drawnCardId))}
         onDraw={drawOrGiveToSelf}
         onGiveCard={(stackId, player) => updateState((s) => giveCard(s, stackId, player))}
+        poses={poses}
+        writeOwnPoses={(map) => writePoses(self.id, map)}
+        onPlayDragChange={setPlayDrag}
       />
 
       <SettingsModal

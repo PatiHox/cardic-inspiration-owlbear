@@ -1,8 +1,10 @@
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import type { FaceCardScale } from "../deck/cards";
 import type { DrawnCard, PlayerRef } from "../deck/state";
-import { CardChip } from "./CardChip";
+import type { PoseMap, PosesByPlayer } from "../deck/pose";
 import { GIVE_CARD_DRAG_TYPE } from "./DeckCardControl";
+import { HandTray, OwnHandTray, type PlayDrag } from "./HandTray";
+import { useOwnPoses } from "./useOwnPoses";
 
 interface HandsBoardProps {
   drawnCards: DrawnCard[];
@@ -30,6 +32,12 @@ interface HandsBoardProps {
   /** DM only: dropping a deck's card onto a *different* player's row gives
    * it to them directly, bypassing the cap. */
   onGiveCard: (stackId: string, player: PlayerRef) => void;
+  /** Every player's card poses (where/how each card sits in their tray). */
+  poses: PosesByPlayer;
+  /** Write the viewer's own pose map to the room (null clears it). */
+  writeOwnPoses: (poses: PoseMap | null) => Promise<void>;
+  /** The viewer is dragging a revealed card toward its discard pile. */
+  onPlayDragChange: (drag: PlayDrag | null) => void;
 }
 
 interface Hand {
@@ -72,12 +80,24 @@ export function HandsBoard({
   onDiscard,
   onDraw,
   onGiveCard,
+  poses,
+  writeOwnPoses,
+  onPlayDragChange,
 }: HandsBoardProps) {
   // A GM viewer always sees every hand; a player viewer only sees a GM's
   // hand when the DM has left it visible.
   const hands = buildRoster(self, party, drawnCards).filter(
     (hand) => isGM || gmHandVisibleToPlayers || !gmPlayerIds.has(hand.player.id),
   );
+
+  // Memoised on the *ids* (not the card objects) so useOwnPoses' pruning
+  // effect only re-runs when a card actually appears or disappears.
+  const ownIdsKey = drawnCards
+    .filter((c) => c.playerId === self.id)
+    .map((c) => c.id)
+    .join("\u0000");
+  const ownCardIds = useMemo(() => (ownIdsKey ? ownIdsKey.split("\u0000") : []), [ownIdsKey]);
+  const ownPoses = useOwnPoses(poses[self.id], ownCardIds, writeOwnPoses);
 
   return (
     <section className="panel" aria-labelledby="hands-heading">
@@ -100,9 +120,12 @@ export function HandsBoard({
               isDropTarget={isDropTarget}
               maxHandSize={maxHandSize}
               faceCardScale={faceCardScale}
+              poses={isSelf ? ownPoses.poses : poses[hand.player.id] ?? EMPTY_POSES}
+              ownPoses={isSelf ? ownPoses : null}
               onFlip={onFlip}
               onDiscard={onDiscard}
               onDropCard={(stackId) => (isSelf ? onDraw(stackId) : onGiveCard(stackId, hand.player))}
+              onPlayDragChange={onPlayDragChange}
             />
           );
         })}
@@ -111,24 +134,33 @@ export function HandsBoard({
   );
 }
 
+const EMPTY_POSES: PoseMap = {};
+
 function HandRow({
   hand,
   isSelf,
   isDropTarget,
   maxHandSize,
   faceCardScale,
+  poses,
+  ownPoses,
   onFlip,
   onDiscard,
   onDropCard,
+  onPlayDragChange,
 }: {
   hand: Hand;
   isSelf: boolean;
   isDropTarget: boolean;
   maxHandSize: number | null;
   faceCardScale: FaceCardScale;
+  poses: PoseMap;
+  /** Only for the viewer's own row: the editable pose map. */
+  ownPoses: ReturnType<typeof useOwnPoses> | null;
   onFlip: (drawnCardId: string) => void;
   onDiscard: (drawnCardId: string) => void;
   onDropCard: (stackId: string) => void;
+  onPlayDragChange: (drag: PlayDrag | null) => void;
 }) {
   const [dragOver, setDragOver] = useState(false);
   // dragenter/dragleave fire again on every child element the pointer
@@ -191,27 +223,19 @@ function HandRow({
 
       {hand.cards.length === 0 ? (
         <p className="hand-empty">{emptyHint}</p>
+      ) : ownPoses ? (
+        <OwnHandTray
+          cards={hand.cards}
+          poses={ownPoses.poses}
+          faceCardScale={faceCardScale}
+          setPose={ownPoses.setPose}
+          flush={ownPoses.flush}
+          onFlip={onFlip}
+          onDiscard={onDiscard}
+          onPlayDragChange={onPlayDragChange}
+        />
       ) : (
-        <div className="hand-cards">
-          {hand.cards.map((card) => {
-            const isOwn = isSelf;
-            return (
-              <div key={card.id} className="hand-card">
-                <CardChip cardId={card.cardId} revealed={card.revealed} faceCardScale={faceCardScale} />
-                {isOwn && !card.revealed && (
-                  <button className="btn btn-tiny" onClick={() => onFlip(card.id)}>
-                    Flip
-                  </button>
-                )}
-                {isOwn && card.revealed && (
-                  <button className="btn btn-tiny" onClick={() => onDiscard(card.id)}>
-                    Play
-                  </button>
-                )}
-              </div>
-            );
-          })}
-        </div>
+        <HandTray cards={hand.cards} poses={poses} faceCardScale={faceCardScale} playerName={hand.player.name} />
       )}
     </li>
   );

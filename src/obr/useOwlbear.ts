@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import OBR, { type Metadata, type Player, type Theme } from "@owlbear-rodeo/sdk";
 import { type DeckState, EMPTY_STATE, METADATA_KEY } from "../deck/state";
+import {
+  parsePoseMap,
+  playerIdFromPoseKey,
+  poseMetadataKey,
+  type PoseMap,
+  type PosesByPlayer,
+} from "../deck/pose";
 
 export interface Self {
   id: string;
@@ -19,6 +26,20 @@ export interface OwlbearContext {
   deckState: DeckState;
   /** Apply a pure state transition and sync the result to room metadata. */
   updateState: (updater: (state: DeckState) => DeckState) => void;
+  /**
+   * Every player's card poses (position/stretch/rotation in their hand
+   * tray), read from one room-metadata key per player. See pose.ts for
+   * why these are kept out of `deckState`.
+   */
+  poses: PosesByPlayer;
+  /**
+   * Overwrite one player's whole pose map — the caller only ever passes
+   * its own player id. `null` deletes the key outright (a player holding
+   * nothing shouldn't leave an empty map behind in the room forever).
+   * Only that key is written: OBR merges top-level metadata keys, so this
+   * can't disturb the deck state or anyone else's poses.
+   */
+  writePoses: (playerId: string, poses: PoseMap | null) => Promise<void>;
 }
 
 function parseDeckState(metadata: Metadata): DeckState {
@@ -34,12 +55,22 @@ function parseDeckState(metadata: Metadata): DeckState {
   return EMPTY_STATE;
 }
 
+function parsePoses(metadata: Metadata): PosesByPlayer {
+  const out: PosesByPlayer = {};
+  for (const [key, value] of Object.entries(metadata)) {
+    const playerId = playerIdFromPoseKey(key);
+    if (playerId) out[playerId] = parsePoseMap(value);
+  }
+  return out;
+}
+
 export function useOwlbear(): OwlbearContext {
   const [sdkReady, setSdkReady] = useState(false);
   const [self, setSelf] = useState<Self | null>(null);
   const [party, setParty] = useState<Player[]>([]);
   const [theme, setTheme] = useState<Theme | null>(null);
   const [deckState, setDeckState] = useState<DeckState>(EMPTY_STATE);
+  const [poses, setPoses] = useState<PosesByPlayer>({});
   const [metadataLoaded, setMetadataLoaded] = useState(false);
 
   // Kept in sync with `deckState` so `updateState` can compute a new value
@@ -76,11 +107,13 @@ export function useOwlbear(): OwlbearContext {
     OBR.room.getMetadata().then((metadata) => {
       if (!cancelled) {
         setDeckState(parseDeckState(metadata));
+        setPoses(parsePoses(metadata));
         setMetadataLoaded(true);
       }
     });
     const unsubscribeRoom = OBR.room.onMetadataChange((metadata) => {
       setDeckState(parseDeckState(metadata));
+      setPoses(parsePoses(metadata));
     });
 
     return () => {
@@ -99,6 +132,16 @@ export function useOwlbear(): OwlbearContext {
     void OBR.room.setMetadata({ [METADATA_KEY]: next });
   }, []);
 
+  const writePoses = useCallback((playerId: string, map: PoseMap | null) => {
+    // Deliberately NOT mirrored into `poses` optimistically: the writer's
+    // own tray renders from its local copy (useOwnPoses), and that hook
+    // relies on `poses` reflecting only what the room has actually echoed
+    // back, in order, to know when its in-flight edits have landed. An
+    // optimistic copy here would make an older echo look like fresh data.
+    // `undefined` on a key deletes it from the room's metadata.
+    return OBR.room.setMetadata({ [poseMetadataKey(playerId)]: map ?? undefined });
+  }, []);
+
   return {
     ready: sdkReady && self !== null && metadataLoaded,
     self,
@@ -106,5 +149,7 @@ export function useOwlbear(): OwlbearContext {
     theme,
     deckState,
     updateState,
+    poses,
+    writePoses,
   };
 }

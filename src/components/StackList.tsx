@@ -3,6 +3,7 @@ import { DECK_PRESETS, DEFAULT_DECK_PRESET_ID, deckPreset } from "../deck/cards"
 import type { Stack } from "../deck/state";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { DeckCardControl } from "./DeckCardControl";
+import { DISCARD_DROP_ATTR, type PlayDrag } from "./HandTray";
 import { ResetIcon, ShuffleIcon, TrashIcon } from "./icons";
 
 interface StackListProps {
@@ -19,6 +20,8 @@ interface StackListProps {
   onRename: (stackId: string, name: string) => void;
   onDelete: (stackId: string) => void;
   onCreate: (name: string, includeJokers: boolean, deckSizeId: string) => void;
+  /** The viewer is dragging a revealed card toward a discard pile (see OwnHandTray). */
+  playDrag: PlayDrag | null;
 }
 
 export function StackList({
@@ -32,6 +35,7 @@ export function StackList({
   onRename,
   onDelete,
   onCreate,
+  playDrag,
 }: StackListProps) {
   const atHandLimit = maxHandSize != null && myHandSize >= maxHandSize;
   // Carries the actual limit number when capped, so DeckCardControl can put
@@ -59,6 +63,7 @@ export function StackList({
             stack={stack}
             isGM={isGM}
             selfAtHandLimit={selfAtHandLimit}
+            playDrag={playDrag?.stackId === stack.id ? playDrag : null}
             onDraw={() => onDraw(stack.id)}
             onShuffle={() => onShuffle(stack.id)}
             onReset={() => onReset(stack.id)}
@@ -77,6 +82,8 @@ interface StackRowProps {
   stack: Stack;
   isGM: boolean;
   selfAtHandLimit: number | false;
+  /** Non-null only while a card from *this* deck is being dragged to discard. */
+  playDrag: PlayDrag | null;
   onDraw: () => void;
   onShuffle: () => void;
   onReset: () => void;
@@ -88,6 +95,7 @@ function StackRow({
   stack,
   isGM,
   selfAtHandLimit,
+  playDrag,
   onDraw,
   onShuffle,
   onReset,
@@ -202,7 +210,7 @@ function StackRow({
           onDraw={onDraw}
           onDragStartStackId={() => stack.id}
         />
-        <DiscardPileView count={stack.discardPile.length} />
+        <DiscardPileView stackId={stack.id} count={stack.discardPile.length} playDrag={playDrag} />
       </div>
 
       <ConfirmDialog
@@ -229,18 +237,36 @@ function StackRow({
 /**
  * The discard pile, sitting next to the draw pile — a muted, desaturated
  * echo of the same card-back pattern (same deck, spent copies) with its
- * own count badge, or a dashed empty slot at 0. Purely a readout, not
- * interactive: there's no "undo a discard" action yet, so nothing here
- * needs a click/drag handler.
+ * own count badge, or a dashed empty slot at 0. It's also where a player
+ * *plays* a card: dragging a revealed card out of their hand and dropping
+ * it here discards it. The drag itself is pointer-driven (see
+ * OwnHandTray), so this only needs to be findable by hit-test — the
+ * DISCARD_DROP_ATTR attribute — and to light up while a card from its own
+ * deck is on the way over. There's still no "undo a discard" action, so
+ * nothing here is clickable.
  */
-function DiscardPileView({ count }: { count: number }) {
+function DiscardPileView({
+  stackId,
+  count,
+  playDrag,
+}: {
+  stackId: string;
+  count: number;
+  playDrag: PlayDrag | null;
+}) {
   const label = count === 0 ? "Discard pile: empty" : `Discard pile: ${count} card${count === 1 ? "" : "s"}`;
+  const className =
+    "discard-pile" +
+    (count === 0 ? " discard-pile--empty" : "") +
+    (playDrag ? " discard-pile--eligible" : "") +
+    (playDrag?.over ? " discard-pile--over" : "");
   return (
     <div
-      className={"discard-pile" + (count === 0 ? " discard-pile--empty" : "")}
+      className={className}
       role="img"
-      aria-label={label}
+      aria-label={playDrag ? `${label} — drop here to play the card` : label}
       title={label}
+      {...{ [DISCARD_DROP_ATTR]: stackId }}
     >
       {count > 0 && (
         <span className="pile-count-badge" aria-hidden="true">

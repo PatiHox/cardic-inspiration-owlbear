@@ -1,10 +1,27 @@
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import { REPO_BASE } from "./site.config.mjs";
 
+/**
+ * `npm run dev:mock` (vite --mode mock) swaps the real SDK for
+ * src/obr/mock-sdk.ts so the popover runs in a plain tab — two tabs, two
+ * players — without Owlbear Rodeo, for working on the hand-tray gestures
+ * and for the automated checks. A mode, not an env var, so nothing here
+ * needs Node typings; never applied to a production build.
+ */
+function mockOwlbearSdk(): Plugin {
+  return {
+    name: "cardic:mock-owlbear-sdk",
+    enforce: "pre",
+    resolveId(id) {
+      return id === "@owlbear-rodeo/sdk" ? this.resolve("/src/obr/mock-sdk.ts") : null;
+    },
+  };
+}
+
 // https://vite.dev/config/
-export default defineConfig(({ command }) => ({
-  plugins: [react()],
+export default defineConfig(({ command, mode }) => ({
+  plugins: [react(), ...(command === "serve" && mode === "mock" ? [mockOwlbearSdk()] : [])],
   // GitHub Pages serves project sites from /<repo-name>/, so the production
   // build needs that base path. Keep the dev server at "/" so `npm run dev`
   // still matches manifest.json's root-relative icon/popover urls unmodified.

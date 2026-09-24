@@ -266,15 +266,6 @@
   color: #c0392b;
 }
 
-.btn-tiny {
-  padding: 4px 10px;
-  font-size: 11px;
-  /* Smaller than .btn's 32px because up to 5 of these sit under one hand's
-     cards in a 420px-wide popover; still clears the 24x24 AA minimum,
-     just short of the 44px best-practice target given the space budget. */
-  min-height: 26px;
-}
-
 .btn-icon {
   width: 32px;
   padding: 0;
@@ -446,6 +437,11 @@
   );
   opacity: 0.5;
   position: relative;
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.12s ease,
+    border-color 0.12s ease,
+    background-color 0.12s ease;
 }
 
 .discard-pile--empty {
@@ -544,19 +540,6 @@
 .player-name {
   font-weight: 600;
   font-size: 13px;
-}
-
-.hand-cards {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.hand-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
 }
 
 .card-chip {
@@ -868,4 +851,288 @@
 .toggle input:focus-visible ~ .toggle-track {
   outline: 2px solid var(--obr-primary, #6a4fb6);
   outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------------------------
+   Hand trays: free placement, stretch, rotate, lift, flip, play
+   --------------------------------------------------------------------------- */
+
+.hand-tray-shell {
+  /* The tray clips its cards; the transform frame is a sibling *outside*
+     that clip so a rotation knob on a card parked at the top edge is still
+     reachable. Both are positioned in the same px space, so the shell must
+     be exactly the tray's box: no padding or border here. */
+  position: relative;
+  width: 100%;
+  --tray-scale: 1;
+}
+
+.hand-tray-shell--compact {
+  /* Another player's space, mirrored smaller. Same aspect ratio, same
+     fractional coordinates, cards scaled by --tray-scale — so it's a
+     faithful miniature, not a squashed one. */
+  width: calc(100% * var(--tray-scale));
+}
+
+.hand-tray {
+  position: relative;
+  width: 100%;
+  aspect-ratio: var(--tray-aspect, 352 / 180);
+  overflow: hidden;
+  border-radius: 8px;
+  border: 1px solid var(--obr-border, rgba(0, 0, 0, 0.12));
+  background: color-mix(in srgb, var(--obr-text, #000) 4%, transparent);
+  /* Flip animations turn in 3D; the perspective lives on the tray so
+     every card shares one vanishing point. */
+  perspective: 900px;
+}
+
+.hand-tray-shell--own .hand-tray {
+  cursor: default;
+}
+
+.tray-card {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: center;
+  /* Onlookers receive poses at a bounded rate (POSE_STREAM_INTERVAL_MS),
+     so a short transition turns those steps into motion. The owner's own
+     card mid-gesture must track the pointer exactly — see --active. */
+  transition:
+    transform 0.16s ease-out,
+    filter 0.15s ease;
+  will-change: transform;
+  filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.25));
+  /* Gestures are ours, not the browser's: no scrolling from a card, no
+     text selection, no native drag image, no iOS callout. */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
+}
+
+.tray-card--own {
+  touch-action: none;
+  cursor: grab;
+}
+
+.tray-card--own:hover {
+  filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.3));
+}
+
+.tray-card--own:focus-visible {
+  outline: none;
+}
+
+.tray-card--active {
+  transition: none;
+  cursor: grabbing;
+}
+
+.tray-card--hidden {
+  /* Its ghost is floating over the rest of the popover instead. */
+  opacity: 0;
+}
+
+.tray-card-flipper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.45s cubic-bezier(0.3, 0.7, 0.3, 1);
+}
+
+.tray-card-flipper--flipped {
+  transform: rotateY(180deg);
+}
+
+.tray-card--lifted .tray-card-flipper {
+  /* The "hovering" stage: picked up off the tray, before it's turned
+     over or moved. Lifted along the tray's normal so the frame overlay
+     (which stays flat on the tray) doesn't drift out from under it. */
+  transform: translateZ(14px);
+}
+
+.tray-card--lifted .tray-card-flipper--flipped {
+  transform: translateZ(14px) rotateY(180deg);
+}
+
+.tray-card--lifted {
+  filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.4));
+}
+
+.tray-card-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.tray-card-face--front {
+  transform: rotateY(180deg);
+}
+
+/* Inside a tray the chip fills its face; the tray-card sets the size
+   (CARD_W/CARD_H × --tray-scale) and the pose's scale stretches it. */
+.tray-card-face .card-chip {
+  width: 100%;
+  height: 100%;
+  border-radius: calc(7px * var(--tray-scale));
+}
+
+.tray-card-face .card-chip-rank {
+  font-size: calc(22px * var(--tray-scale));
+}
+
+.tray-card-face .card-chip-bonus {
+  font-size: calc(11px * var(--tray-scale));
+}
+
+/* --- Transform frame ------------------------------------------------------ */
+
+.tray-frame {
+  position: absolute;
+  box-sizing: border-box;
+  border: 1.5px solid var(--obr-primary, #6a4fb6);
+  border-radius: 4px;
+  transform-origin: center;
+  pointer-events: none;
+  /* Above every card (their z-index is 1 + pose.z, pose.z is a small
+     counter) but below the ghost/menu portals. */
+  z-index: 10000;
+}
+
+.tray-handle {
+  position: absolute;
+  /* Drawn 12px, but the hit area is a full 28px for fingers. */
+  width: 28px;
+  height: 28px;
+  transform: translate(-50%, -50%);
+  pointer-events: auto;
+  touch-action: none;
+  background: transparent;
+}
+
+.tray-handle::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  transform: translate(-50%, -50%);
+  border-radius: 3px;
+  background: var(--obr-bg-paper, #fff);
+  border: 1.5px solid var(--obr-primary, #6a4fb6);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.tray-handle--rotate {
+  left: 50%;
+  cursor: grab;
+}
+
+.tray-handle--rotate::after {
+  border-radius: 50%;
+  width: 14px;
+  height: 14px;
+}
+
+.tray-rotate-stem {
+  position: absolute;
+  left: 50%;
+  bottom: 100%;
+  width: 0;
+  border-left: 1.5px solid var(--obr-primary, #6a4fb6);
+  transform: translateX(-50%);
+}
+
+/* --- Ghost: a revealed card carried out of the tray ------------------------ */
+
+.tray-ghost {
+  position: fixed;
+  z-index: 20000;
+  pointer-events: none;
+  transform-origin: center;
+  filter: drop-shadow(0 10px 12px rgba(0, 0, 0, 0.45));
+  --tray-scale: 1;
+}
+
+.tray-ghost .card-chip {
+  width: 100%;
+  height: 100%;
+}
+
+.tray-ghost .card-chip-rank {
+  font-size: 22px;
+}
+
+.tray-ghost .card-chip-bonus {
+  font-size: 11px;
+}
+
+/* --- Discard pile as a drop target ----------------------------------------- */
+
+.discard-pile--eligible {
+  border-style: dashed;
+  border-color: var(--obr-primary, #6a4fb6);
+  background-color: color-mix(in srgb, var(--obr-primary, #6a4fb6) 10%, transparent);
+}
+
+.discard-pile--over {
+  border-style: solid;
+  border-color: var(--obr-primary, #6a4fb6);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--obr-primary, #6a4fb6) 35%, transparent);
+  transform: scale(1.08);
+}
+
+/* --- Long-press / right-click menu ------------------------------------------ */
+
+.tray-menu {
+  position: fixed;
+  z-index: 30000;
+  min-width: 140px;
+  padding: 4px;
+  border-radius: 8px;
+  border: 1px solid var(--obr-border, rgba(0, 0, 0, 0.12));
+  background: color-mix(in srgb, var(--obr-bg-paper, #f7f6f3) var(--obr-glass-modal, 96%), transparent);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+}
+
+.tray-menu-item {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--obr-text, #111);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  min-height: 32px;
+}
+
+.tray-menu-item:hover,
+.tray-menu-item:focus-visible {
+  background: color-mix(in srgb, var(--obr-primary, #6a4fb6) 14%, transparent);
+  outline: none;
+}
+
+.tray-menu-item:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tray-card,
+  .tray-card-flipper,
+  .discard-pile {
+    transition: none;
+  }
 }
