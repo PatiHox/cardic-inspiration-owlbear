@@ -71,9 +71,12 @@ smaller under your name in their view, and they see them move as you drag
 (streamed at a bounded rate so a long drag doesn't flood the room). Only
 you can place and shape your own cards — nobody else's tray is editable,
 the DM's included. The one exception: the DM can **remove** a card from
-any player's hand (right-click or long-press it, or focus it and press
-Delete), which returns it to its deck's discard pile without revealing it
-and without disturbing the rest of that player's arrangement.
+any player's hand by dragging it onto its deck's discard pile (a ghost
+of the card follows the pointer; the card itself never moves, and letting
+go anywhere else just puts the ghost away). Right-click or long-press for
+a menu, or focus the card and press Delete, do the same. Removal returns
+the card to the discard pile without revealing it and without disturbing
+the rest of that player's arrangement.
 
 All state lives in the Owlbear Rodeo room's metadata, which OBR syncs live
 to every connected client — that's what makes the popover "shared": every

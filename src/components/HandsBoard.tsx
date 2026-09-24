@@ -245,6 +245,7 @@ function HandRow({
           faceCardScale={faceCardScale}
           playerName={hand.player.name}
           onRemove={canRemove ? onDiscard : undefined}
+          onPlayDragChange={canRemove ? onPlayDragChange : undefined}
         />
       )}
     </li>

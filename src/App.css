@@ -926,12 +926,26 @@
 }
 
 .tray-card--removable {
-  /* A DM's view of someone else's card: no dragging, so no grab cursor —
-     the context-menu cursor hints at the one thing that *is* available. */
-  cursor: context-menu;
+  /* A DM's view of someone else's card: it can be picked up and carried
+     to the discard pile (its ghost, not the card — the card never moves),
+     so it gets the same grab cursor as one's own cards. */
+  cursor: grab;
+  touch-action: none;
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
+}
+
+.hand-tray-shell--carrying .tray-card--removable {
+  cursor: grabbing;
+}
+
+.tray-card--carried {
+  /* Stays exactly in place while its ghost travels; dimmed so it reads as
+     "being taken", and the transition is off so a stale pose echo can't
+     make it drift while the DM is holding it. */
+  opacity: 0.45;
+  transition: none;
 }
 
 .tray-card--removable:hover,

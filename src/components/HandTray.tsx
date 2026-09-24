@@ -132,8 +132,10 @@ interface TrayCardProps {
   /** Hidden while its ghost is floating outside the tray. */
   hidden?: boolean;
   interactive?: boolean;
-  /** A DM viewing someone else's tray: focusable, with a remove menu, nothing else. */
+  /** A DM viewing someone else's tray: focusable, draggable to the discard pile, nothing else. */
   removable?: boolean;
+  /** The DM is carrying this card's ghost right now; the card itself stays put, dimmed. */
+  carried?: boolean;
   onKeyDown?: (e: ReactKeyboardEvent<HTMLDivElement>) => void;
   onFocus?: () => void;
   onBlur?: (e: ReactFocusEvent<HTMLDivElement>) => void;
@@ -151,6 +153,7 @@ function TrayCard({
   hidden = false,
   interactive = false,
   removable = false,
+  carried = false,
   onKeyDown,
   onFocus,
   onBlur,
@@ -168,7 +171,8 @@ function TrayCard({
     (active ? " tray-card--active" : "") +
     (hidden ? " tray-card--hidden" : "") +
     (interactive ? " tray-card--own" : "") +
-    (removable ? " tray-card--removable" : "");
+    (removable ? " tray-card--removable" : "") +
+    (carried ? " tray-card--carried" : "");
   const name = cardAccessibleName(card, faceCardScale);
   const focusable = interactive || removable;
   return (
@@ -180,7 +184,7 @@ function TrayCard({
       tabIndex={focusable ? 0 : undefined}
       aria-label={interactive && selected ? `${name}, lifted` : name}
       aria-pressed={interactive ? selected : undefined}
-      title={removable ? "Right-click or long-press to remove this card from the hand" : undefined}
+      title={removable ? "Drag onto the deck's discard pile to remove this card from the hand" : undefined}
       aria-describedby={describedBy}
       draggable={false}
       onKeyDown={onKeyDown}
@@ -204,6 +208,154 @@ function TrayCard({
 }
 
 // ---------------------------------------------------------------------------
+// Carrying a card to a discard pile — shared by the owner's "play" drag and
+// the DM's "remove" drag
+// ---------------------------------------------------------------------------
+
+export interface PlayDrag {
+  stackId: string;
+  /** Is the pointer currently over that stack's discard pile? */
+  over: boolean;
+}
+
+interface Ghost {
+  cardId: string;
+  x: number;
+  y: number;
+}
+
+/**
+ * setPointerCapture throws for a pointer that's already gone (a touch that
+ * ended before React got to the handler, a synthetic event) — a lost
+ * capture just means the gesture ends at the shell's edge, never a crash.
+ */
+function capture(el: HTMLElement | null, pointerId: number) {
+  try {
+    el?.setPointerCapture(pointerId);
+  } catch {
+    /* see above */
+  }
+}
+
+function dist(a: Point, b: Point): number {
+  return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
+/**
+ * The floating copy of a card being carried across the popover, the
+ * matching discard pile's highlight state, and auto-scroll near the
+ * popover's edges. Purely about the carry: what happens on drop is the
+ * caller's decision.
+ */
+function useCarryToDiscard(onPlayDragChange: (drag: PlayDrag | null) => void, isCarrying: () => boolean) {
+  const [ghost, setGhost] = useState<Ghost | null>(null);
+  /** The matching pile currently under the pointer, if any. */
+  const dropStackId = useRef<string | null>(null);
+  const lastClient = useRef<Point | null>(null);
+  const scrollRaf = useRef<number | null>(null);
+  const onChange = useRef(onPlayDragChange);
+  onChange.current = onPlayDragChange;
+  const carrying = useRef(isCarrying);
+  carrying.current = isCarrying;
+
+  const stopEdgeScroll = useCallback(() => {
+    if (scrollRaf.current != null) cancelAnimationFrame(scrollRaf.current);
+    scrollRaf.current = null;
+  }, []);
+
+  const ensureEdgeScroll = useCallback(() => {
+    if (scrollRaf.current != null) return;
+    const step = () => {
+      const p = lastClient.current;
+      if (!p || !carrying.current()) {
+        scrollRaf.current = null;
+        return;
+      }
+      const h = window.innerHeight;
+      let dy = 0;
+      if (p.y < EDGE_SCROLL_ZONE_PX) dy = -Math.ceil((EDGE_SCROLL_ZONE_PX - p.y) / 4);
+      else if (p.y > h - EDGE_SCROLL_ZONE_PX) dy = Math.ceil((p.y - (h - EDGE_SCROLL_ZONE_PX)) / 4);
+      if (dy !== 0) (document.scrollingElement ?? document.documentElement).scrollBy(0, dy);
+      scrollRaf.current = requestAnimationFrame(step);
+    };
+    scrollRaf.current = requestAnimationFrame(step);
+  }, []);
+
+  /** Pointer moved while carrying `card`: update ghost, pile highlight, scrolling. */
+  const track = useCallback(
+    (card: DrawnCard, client: Point, showGhost: boolean) => {
+      lastClient.current = client;
+      setGhost(showGhost ? { cardId: card.id, x: client.x, y: client.y } : null);
+      let over: string | null = null;
+      for (const el of document.elementsFromPoint(client.x, client.y)) {
+        const pile = (el as HTMLElement).closest?.(`[${DISCARD_DROP_ATTR}]`) as HTMLElement | null;
+        if (pile) {
+          over = pile.getAttribute(DISCARD_DROP_ATTR);
+          break;
+        }
+      }
+      const matches = over === card.stackId;
+      const next = matches ? card.stackId : null;
+      if (next !== dropStackId.current) {
+        dropStackId.current = next;
+        onChange.current({ stackId: card.stackId, over: matches });
+      }
+      if (showGhost) ensureEdgeScroll();
+      else stopEdgeScroll();
+    },
+    [ensureEdgeScroll, stopEdgeScroll],
+  );
+
+  /** The carry is over (dropped, cancelled, or turned into something else). */
+  const end = useCallback(
+    (wasCarrying: boolean) => {
+      setGhost(null);
+      stopEdgeScroll();
+      if (dropStackId.current !== null || wasCarrying) {
+        dropStackId.current = null;
+        onChange.current(null);
+      }
+    },
+    [stopEdgeScroll],
+  );
+
+  return { ghost, dropStackId, track, end };
+}
+
+function CarryGhost({
+  ghost,
+  card,
+  pose,
+  faceCardScale,
+}: {
+  ghost: Ghost;
+  card: DrawnCard;
+  pose: CardPose;
+  faceCardScale: FaceCardScale;
+}) {
+  // Portaled to the app root (see ConfirmDialog.tsx for why not body): it
+  // floats over every panel, and `.panel`'s backdrop-filter would otherwise
+  // trap a fixed-position child inside that one panel.
+  const portalTarget = document.getElementById("app-root") ?? document.body;
+  return createPortal(
+    <div
+      className="tray-ghost"
+      aria-hidden="true"
+      style={{
+        left: ghost.x,
+        top: ghost.y,
+        width: CARD_W,
+        height: CARD_H,
+        transform: `translate(-50%, -50%) rotate(${pose.rotation}deg) scale(${pose.scaleX}, ${pose.scaleY})`,
+      }}
+    >
+      <CardChip cardId={card.cardId} revealed={card.revealed} faceCardScale={faceCardScale} />
+    </div>,
+    portalTarget,
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Read-only tray: everyone else's hands
 // ---------------------------------------------------------------------------
 
@@ -213,12 +365,17 @@ interface HandTrayProps {
   faceCardScale: FaceCardScale;
   playerName: string;
   /**
-   * DM only: take a card out of this hand (back to its deck's discard
-   * pile), via right-click / long-press menu or Delete on a focused card.
-   * That is the *only* thing a DM can do here — the owner's placement and
-   * shaping are theirs alone, and a face-down card stays face-down.
+   * DM only: take a card out of this hand, back to its deck's discard
+   * pile. Drag it there: a ghost follows the pointer while the card itself
+   * stays exactly where its owner put it, and a drop anywhere else simply
+   * lets go. Right-click / long-press menu and Delete on a focused card
+   * do the same without a pointer. That is the *only* thing a DM can do
+   * here — the owner's placement and shaping are theirs alone, and a
+   * face-down card stays face-down.
    */
   onRemove?: (drawnCardId: string) => void;
+  /** With onRemove: the DM is carrying one of these cards toward its discard pile. */
+  onPlayDragChange?: (drag: PlayDrag | null) => void;
 }
 
 /**
@@ -227,7 +384,7 @@ interface HandTrayProps {
  * animate between updates (see .tray-card's transition) instead of
  * teleporting. Never writes a pose.
  */
-export function HandTray({ cards, poses, faceCardScale, playerName, onRemove }: HandTrayProps) {
+export function HandTray({ cards, poses, faceCardScale, playerName, onRemove, onPlayDragChange }: HandTrayProps) {
   const trayRef = useRef<HTMLDivElement>(null);
   const tray = useElementSize(trayRef);
   const scale = COMPACT_TRAY_SCALE;
@@ -235,19 +392,28 @@ export function HandTray({ cards, poses, faceCardScale, playerName, onRemove }: 
   const resolved = resolvePoses(cards, poses, logical);
   const byId = new Map(resolved.map((r) => [r.card.id, r]));
 
+  const shellRef = useRef<HTMLDivElement>(null);
   const [menu, setMenu] = useState<Menu | null>(null);
-  const press = useRef<{ cardId: string; pointerId: number; start: Point; timer: ReturnType<typeof setTimeout> } | null>(
-    null,
-  );
+  /** The card the DM is currently carrying (dimmed in place; its ghost follows the pointer). */
+  const [carriedId, setCarriedId] = useState<string | null>(null);
+  type RemoveGesture =
+    | { kind: "press"; cardId: string; pointerId: number; start: Point; timer: ReturnType<typeof setTimeout> }
+    | { kind: "carry"; cardId: string; pointerId: number };
+  const gesture = useRef<RemoveGesture | null>(null);
+  const carry = useCarryToDiscard(onPlayDragChange ?? (() => {}), () => gesture.current?.kind === "carry");
   const hintId = `hand-tray-remove-hint-${playerName.replace(/\W+/g, "-")}`;
 
   useEffect(() => {
     if (menu && !byId.has(menu.cardId)) setMenu(null);
+    if (carriedId && !byId.has(carriedId)) setCarriedId(null);
   });
 
-  const cancelPress = () => {
-    if (press.current) clearTimeout(press.current.timer);
-    press.current = null;
+  const endRemoveGesture = () => {
+    const g = gesture.current;
+    if (g?.kind === "press") clearTimeout(g.timer);
+    gesture.current = null;
+    setCarriedId(null);
+    carry.end(g?.kind === "carry");
   };
 
   const cardIdAt = (target: EventTarget | null) =>
@@ -259,29 +425,51 @@ export function HandTray({ cards, poses, faceCardScale, playerName, onRemove }: 
           if (e.pointerType === "mouse" && e.button !== 0) return;
           const cardId = cardIdAt(e.target);
           if (!cardId || !trayRef.current?.contains(e.target as Node)) return;
-          cancelPress();
+          e.preventDefault();
+          endRemoveGesture();
+          setMenu(null);
+          capture(shellRef.current, e.pointerId);
           const client = { x: e.clientX, y: e.clientY };
           const timer = setTimeout(() => {
-            if (press.current?.cardId === cardId) {
-              press.current = null;
+            // Held still: open the menu instead of carrying.
+            if (gesture.current?.kind === "press" && gesture.current.cardId === cardId) {
+              gesture.current = null;
               setMenu({ cardId, ...client });
             }
           }, LONG_PRESS_MS);
-          press.current = { cardId, pointerId: e.pointerId, start: client, timer };
+          gesture.current = { kind: "press", cardId, pointerId: e.pointerId, start: client, timer };
         },
         onPointerMove: (e: ReactPointerEvent<HTMLDivElement>) => {
-          const p = press.current;
-          if (p && p.pointerId === e.pointerId && dist(p.start, { x: e.clientX, y: e.clientY }) >= TAP_SLOP_PX) {
-            cancelPress();
+          let g = gesture.current;
+          if (!g || g.pointerId !== e.pointerId) return;
+          const client = { x: e.clientX, y: e.clientY };
+          if (g.kind === "press") {
+            if (dist(g.start, client) < TAP_SLOP_PX) return;
+            clearTimeout(g.timer);
+            g = gesture.current = { kind: "carry", cardId: g.cardId, pointerId: e.pointerId };
+            setCarriedId(g.cardId);
           }
+          const r = byId.get(g.cardId);
+          if (!r) return endRemoveGesture();
+          // The card in the tray never moves — only its ghost does.
+          carry.track(r.card, client, true);
         },
-        onPointerUp: cancelPress,
-        onPointerCancel: cancelPress,
+        onPointerUp: (e: ReactPointerEvent<HTMLDivElement>) => {
+          const g = gesture.current;
+          if (!g || g.pointerId !== e.pointerId) return;
+          const dropped = g.kind === "carry" && carry.dropStackId.current !== null;
+          const cardId = g.cardId;
+          endRemoveGesture();
+          if (dropped) onRemove(cardId);
+        },
+        onPointerCancel: (e: ReactPointerEvent<HTMLDivElement>) => {
+          if (gesture.current?.pointerId === e.pointerId) endRemoveGesture();
+        },
         onContextMenu: (e: React.MouseEvent<HTMLDivElement>) => {
           const cardId = cardIdAt(e.target);
           if (!cardId) return;
           e.preventDefault();
-          cancelPress();
+          endRemoveGesture();
           if (!menu) setMenu({ cardId, x: e.clientX, y: e.clientY });
         },
       }
@@ -314,18 +502,24 @@ export function HandTray({ cards, poses, faceCardScale, playerName, onRemove }: 
   };
 
   const menuCard = menu ? byId.get(menu.cardId) ?? null : null;
+  const ghostCard = carry.ghost ? byId.get(carry.ghost.cardId) ?? null : null;
   const portalTarget = document.getElementById("app-root") ?? document.body;
 
   return (
     <div
-      className={"hand-tray-shell hand-tray-shell--compact" + (onRemove ? " hand-tray-shell--removable" : "")}
+      ref={shellRef}
+      className={
+        "hand-tray-shell hand-tray-shell--compact" +
+        (onRemove ? " hand-tray-shell--removable" : "") +
+        (carriedId ? " hand-tray-shell--carrying" : "")
+      }
       style={{ "--tray-scale": scale, "--tray-aspect": TRAY_ASPECT } as CSSProperties}
       {...removeHandlers}
     >
       {onRemove && (
         <p id={hintId} className="sr-only">
-          {playerName}'s cards. As the DM you can remove a card from this hand: press Delete on it, or press Enter
-          for a menu. With a pointer, right-click or long-press it.
+          {playerName}'s cards. As the DM you can remove a card from this hand: drag it onto its deck's discard
+          pile, press Delete on it, press Enter for a menu, or right-click or long-press it.
         </p>
       )}
       <div ref={trayRef} className="hand-tray" role={onRemove ? undefined : "list"} aria-label={`${playerName}'s cards`}>
@@ -338,11 +532,15 @@ export function HandTray({ cards, poses, faceCardScale, playerName, onRemove }: 
             scale={scale}
             faceCardScale={faceCardScale}
             removable={!!onRemove}
+            carried={carriedId === card.id}
             describedBy={onRemove ? hintId : undefined}
             onKeyDown={onRemove ? onCardKeyDown(card.id) : undefined}
           />
         ))}
       </div>
+      {ghostCard && carry.ghost && (
+        <CarryGhost ghost={carry.ghost} card={ghostCard.card} pose={ghostCard.pose} faceCardScale={faceCardScale} />
+      )}
       {menuCard &&
         menu &&
         onRemove &&
@@ -370,12 +568,6 @@ export function HandTray({ cards, poses, faceCardScale, playerName, onRemove }: 
 // ---------------------------------------------------------------------------
 // The viewer's own tray: move / stretch / rotate / lift / flip / play
 // ---------------------------------------------------------------------------
-
-export interface PlayDrag {
-  stackId: string;
-  /** Is the pointer currently over that stack's discard pile? */
-  over: boolean;
-}
 
 interface OwnHandTrayProps {
   cards: DrawnCard[];
@@ -410,29 +602,6 @@ interface Menu {
   cardId: string;
   x: number;
   y: number;
-}
-
-interface Ghost {
-  cardId: string;
-  x: number;
-  y: number;
-}
-
-/**
- * setPointerCapture throws for a pointer that's already gone (a touch that
- * ended before React got to the handler, a synthetic event) — a lost
- * capture just means the gesture ends at the shell's edge, never a crash.
- */
-function capture(el: HTMLElement | null, pointerId: number) {
-  try {
-    el?.setPointerCapture(pointerId);
-  } catch {
-    /* see above */
-  }
-}
-
-function dist(a: Point, b: Point): number {
-  return Math.hypot(a.x - b.x, a.y - b.y);
 }
 
 function handleCursor(dir: HandleDir, rotation: number): string {
@@ -473,14 +642,12 @@ export function OwnHandTray({
     setSelectedIdState(id);
   };
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [ghost, setGhost] = useState<Ghost | null>(null);
   const [menu, setMenu] = useState<Menu | null>(null);
 
   const gesture = useRef<Gesture | null>(null);
   const pointers = useRef(new Map<number, Point>());
-  const dropStackId = useRef<string | null>(null);
-  const lastClient = useRef<Point | null>(null);
-  const scrollRaf = useRef<number | null>(null);
+  const carry = useCarryToDiscard(onPlayDragChange, () => gesture.current?.kind === "move");
+  const ghost = carry.ghost;
   const hintId = "hand-tray-keys-hint";
 
   // A selected card that vanished (played, deck reset) can't stay selected.
@@ -522,54 +689,6 @@ export function OwnHandTray({
     }
   }
 
-  // --- Play-by-drop: find a matching discard pile under the pointer -------
-
-  const updateDropTarget = useCallback(
-    (card: DrawnCard, client: Point) => {
-      let over: string | null = null;
-      for (const el of document.elementsFromPoint(client.x, client.y)) {
-        const pile = (el as HTMLElement).closest?.(`[${DISCARD_DROP_ATTR}]`) as HTMLElement | null;
-        if (pile) {
-          over = pile.getAttribute(DISCARD_DROP_ATTR);
-          break;
-        }
-      }
-      const matches = over === card.stackId;
-      const next = matches ? card.stackId : null;
-      if (next !== dropStackId.current) {
-        dropStackId.current = next;
-        onPlayDragChange({ stackId: card.stackId, over: matches });
-      }
-    },
-    [onPlayDragChange],
-  );
-
-  // --- Auto-scroll the popover while a ghost is near its top/bottom edge --
-
-  const stopEdgeScroll = useCallback(() => {
-    if (scrollRaf.current != null) cancelAnimationFrame(scrollRaf.current);
-    scrollRaf.current = null;
-  }, []);
-
-  const ensureEdgeScroll = useCallback(() => {
-    if (scrollRaf.current != null) return;
-    const step = () => {
-      const p = lastClient.current;
-      const g = gesture.current;
-      if (!p || !g || g.kind !== "move") {
-        scrollRaf.current = null;
-        return;
-      }
-      const h = window.innerHeight;
-      let dy = 0;
-      if (p.y < EDGE_SCROLL_ZONE_PX) dy = -Math.ceil((EDGE_SCROLL_ZONE_PX - p.y) / 4);
-      else if (p.y > h - EDGE_SCROLL_ZONE_PX) dy = Math.ceil((p.y - (h - EDGE_SCROLL_ZONE_PX)) / 4);
-      if (dy !== 0) (document.scrollingElement ?? document.documentElement).scrollBy(0, dy);
-      scrollRaf.current = requestAnimationFrame(step);
-    };
-    scrollRaf.current = requestAnimationFrame(step);
-  }, []);
-
   // --- Gesture lifecycle ---------------------------------------------------
 
   const endGesture = useCallback(() => {
@@ -577,14 +696,9 @@ export function OwnHandTray({
     if (g?.kind === "press") clearTimeout(g.timer);
     gesture.current = null;
     setActiveId(null);
-    setGhost(null);
-    stopEdgeScroll();
-    if (dropStackId.current !== null || g?.kind === "move") {
-      dropStackId.current = null;
-      onPlayDragChange(null);
-    }
+    carry.end(g?.kind === "move");
     flush();
-  }, [flush, onPlayDragChange, stopEdgeScroll]);
+  }, [flush, carry]);
 
   const openMenu = useCallback((cardId: string, client: Point) => {
     setMenu({ cardId, x: client.x, y: client.y });
@@ -659,7 +773,7 @@ export function OwnHandTray({
         startMid: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 },
         startCenter: { x: pose.x * tray.w, y: pose.y * tray.h },
       };
-      setGhost(null);
+      carry.end(true);
       setActiveId(r.card.id);
       return;
     }
@@ -678,7 +792,6 @@ export function OwnHandTray({
   const onPointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
     const client = { x: e.clientX, y: e.clientY };
     if (pointers.current.has(e.pointerId)) pointers.current.set(e.pointerId, client);
-    lastClient.current = client;
     let g = gesture.current;
     if (!g) return;
 
@@ -713,11 +826,7 @@ export function OwnHandTray({
           // A revealed card can be carried out of the tray, to its
           // deck's discard pile. Face-down cards stay on the tray:
           // there's nowhere else for them to go.
-          const outside = !insideTray(client);
-          setGhost(outside ? { cardId: g.cardId, x: client.x, y: client.y } : null);
-          updateDropTarget(r.card, client);
-          if (outside) ensureEdgeScroll();
-          else stopEdgeScroll();
+          carry.track(r.card, client, !insideTray(client));
         }
         return;
       }
@@ -784,7 +893,7 @@ export function OwnHandTray({
       return endGesture();
     }
 
-    if (g.kind === "move" && dropStackId.current) {
+    if (g.kind === "move" && carry.dropStackId.current) {
       const id = g.cardId;
       endGesture();
       setSelectedId(null);
@@ -1007,24 +1116,9 @@ export function OwnHandTray({
         </div>
       )}
 
-      {ghostCard &&
-        ghost &&
-        createPortal(
-          <div
-            className="tray-ghost"
-            aria-hidden="true"
-            style={{
-              left: ghost.x,
-              top: ghost.y,
-              width: CARD_W,
-              height: CARD_H,
-              transform: `translate(-50%, -50%) rotate(${ghostCard.pose.rotation}deg) scale(${ghostCard.pose.scaleX}, ${ghostCard.pose.scaleY})`,
-            }}
-          >
-            <CardChip cardId={ghostCard.card.cardId} revealed={true} faceCardScale={faceCardScale} />
-          </div>,
-          portalTarget,
-        )}
+      {ghostCard && ghost && (
+        <CarryGhost ghost={ghost} card={ghostCard.card} pose={ghostCard.pose} faceCardScale={faceCardScale} />
+      )}
 
       {menuCard &&
         menu &&
