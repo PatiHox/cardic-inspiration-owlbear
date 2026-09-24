@@ -24,6 +24,13 @@ import { GearIcon } from "./components/icons";
 import type { PlayDrag } from "./components/HandTray";
 import "./App.css";
 
+/**
+ * What this build calls itself. The dev channel (see site.config.mjs and
+ * the deploy workflow) installs in OBR as a separate extension named
+ * "Cardic Inspiration (dev)", so its popover says so too.
+ */
+const APP_TITLE = __SITE_CHANNEL__ === "dev" ? "Cardic Inspiration (dev)" : "Cardic Inspiration";
+
 function themeVars(theme: Theme | null): CSSProperties {
   if (!theme) return {};
   return {
@@ -121,7 +128,7 @@ export default function App() {
       <header className="app-header">
         <img src={`${import.meta.env.BASE_URL}icon.svg`} alt="" className="app-icon" />
         <div>
-          <h1>Cardic Inspiration</h1>
+          <h1>{APP_TITLE}</h1>
           <p className="app-subtitle">{isGM ? "DM view" : "Player view"}</p>
         </div>
         <button

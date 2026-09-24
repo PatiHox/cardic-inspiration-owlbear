@@ -1,6 +1,6 @@
 import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
-import { REPO_BASE } from "./site.config.mjs";
+import { CHANNEL, REPO_BASE } from "./site.config.mjs";
 
 /**
  * `npm run dev:mock` (vite --mode mock) swaps the real SDK for
@@ -30,6 +30,14 @@ export default defineConfig(({ command, mode }) => ({
   // REPO_BASE after `vite build`, since OBR's frontend expects those fields
   // to already be full paths rather than resolving them itself.
   base: command === "build" ? REPO_BASE : "/",
+  // The release channel, baked in at build time so the popover can label
+  // itself: a dev-channel build shows "(dev)" in its own header, the same
+  // suffix its manifest carries, so nobody mistakes which one they're
+  // looking at. Comes from SITE_CHANNEL (see site.config.mjs), which the
+  // deploy workflow sets — never edited by hand.
+  define: {
+    __SITE_CHANNEL__: JSON.stringify(CHANNEL),
+  },
   server: {
     // Owlbear Rodeo needs to be able to load this dev server in an iframe.
     // Vite disables CORS by default since v6.0.9, so it must be re-enabled
